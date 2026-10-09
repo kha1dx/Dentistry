@@ -9,16 +9,16 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "soft";
 type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-primary text-primary-ink hover:bg-primary-hover shadow-card",
-  secondary: "bg-surface text-ink border border-line hover:border-line-strong hover:bg-surface-2 shadow-card",
+  primary: "bg-primary text-primary-ink hover:bg-primary-hover",
+  secondary: "bg-surface text-ink border border-line hover:border-line-strong hover:bg-surface-2",
   ghost: "text-ink-2 hover:text-ink hover:bg-surface-3",
   danger: "bg-bad text-white hover:opacity-90",
   soft: "bg-primary-soft text-primary-soft-ink hover:brightness-95",
 };
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-2.5 text-[13px] gap-1.5 rounded-lg",
-  md: "h-9 px-3.5 text-sm gap-2 rounded-[10px]",
-  lg: "h-11 px-5 text-[15px] gap-2 rounded-xl",
+  sm: "h-8 px-3.5 text-[13px] gap-1.5 rounded-full",
+  md: "h-10 px-4 text-sm gap-2 rounded-full",
+  lg: "h-12 px-6 text-[15px] gap-2 rounded-full",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -37,7 +37,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type={type}
       className={cn(
-        "inline-flex select-none items-center justify-center whitespace-nowrap font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex select-none items-center justify-center whitespace-nowrap font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50",
         variants[variant],
         sizes[size],
         className,
@@ -57,7 +57,7 @@ export function IconButton({ label, className, children, ...rest }: ButtonHTMLAt
       type="button"
       aria-label={label}
       title={label}
-      className={cn("inline-flex h-9 w-9 items-center justify-center rounded-[10px] text-ink-2 transition-colors hover:bg-surface-3 hover:text-ink", className)}
+      className={cn("inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-2 transition-colors hover:bg-surface-3 hover:text-ink", className)}
       {...rest}
     >
       {children}
@@ -89,7 +89,7 @@ const dots: Record<Tone, string> = {
 
 export function Badge({ tone = "neutral", dot, children, className, icon }: { tone?: Tone; dot?: boolean; children: ReactNode; className?: string; icon?: ReactNode }) {
   return (
-    <span className={cn("inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[12px] font-medium leading-none", tones[tone], className)}>
+    <span className={cn("inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[12px] font-semibold leading-none", tones[tone], className)}>
       {dot && <span className={cn("h-1.5 w-1.5 rounded-full", dots[tone])} />}
       {icon}
       {children}
@@ -104,15 +104,15 @@ export function Dot({ tone = "neutral", className }: { tone?: Tone; className?: 
 /* -------------------------------------------------------------------- Card */
 
 export function Card({ className, children, as: As = "section" }: { className?: string; children: ReactNode; as?: "section" | "div" | "article" }) {
-  return <As className={cn("rounded-2xl border border-line bg-surface shadow-card", className)}>{children}</As>;
+  return <As className={cn("rounded-2xl border border-line/70 bg-surface shadow-card", className)}>{children}</As>;
 }
 
 export function CardHeader({ title, sub, action, className }: { title: ReactNode; sub?: ReactNode; action?: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex items-start justify-between gap-3 px-5 pt-4", className)}>
+    <div className={cn("flex items-start justify-between gap-3 px-6 pt-5", className)}>
       <div className="min-w-0">
-        <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-ink">{title}</h3>
-        {sub && <p className="mt-0.5 text-[13px] text-ink-muted">{sub}</p>}
+        <h3 className="text-[16px] font-bold tracking-[-0.015em] text-ink">{title}</h3>
+        {sub && <p className="mt-0.5 text-[13px] font-medium text-ink-muted">{sub}</p>}
       </div>
       {action && <div className="flex shrink-0 items-center gap-1.5">{action}</div>}
     </div>
@@ -153,7 +153,7 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div role="tablist" className={cn("inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-xl border border-line bg-surface-2 p-0.5 no-scrollbar", className)}>
+    <div role="tablist" className={cn("inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full bg-surface-3 p-1 no-scrollbar", className)}>
       {options.map((o) => (
         <button
           key={o.id}
@@ -162,8 +162,8 @@ export function Segmented<T extends string>({
           aria-selected={value === o.id}
           onClick={() => onChange(o.id)}
           className={cn(
-            "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[10px] font-medium transition-colors",
-            size === "sm" ? "h-7 px-2.5 text-[12.5px]" : "h-8 px-3 text-[13px]",
+            "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full font-semibold transition-colors",
+            size === "sm" ? "h-7 px-3 text-[12.5px]" : "h-8 px-3.5 text-[13px]",
             value === o.id ? "bg-surface text-ink shadow-card" : "text-ink-muted hover:text-ink",
           )}
         >
@@ -184,7 +184,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
     <input
       ref={ref}
       className={cn(
-        "h-9 w-full rounded-[10px] border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-soft",
+        "h-10 w-full rounded-xl border border-line bg-surface px-3.5 text-sm font-medium text-ink placeholder:font-normal placeholder:text-ink-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-soft",
         className,
       )}
       {...rest}
@@ -195,8 +195,8 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 export function SearchInput({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className={cn("relative", className)}>
-      <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
-      <Input className="pl-8" {...rest} />
+      <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+      <Input className="rounded-full pl-10" {...rest} />
     </div>
   );
 }
@@ -205,12 +205,12 @@ export function Select({ className, children, ...rest }: SelectHTMLAttributes<HT
   return (
     <div className={cn("relative", className)}>
       <select
-        className="h-9 w-full appearance-none rounded-[10px] border border-line bg-surface pl-3 pr-8 text-sm text-ink transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-soft"
+        className="h-10 w-full appearance-none rounded-full border border-line bg-surface pl-4 pr-9 text-sm font-medium text-ink transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-soft"
         {...rest}
       >
         {children}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+      <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
     </div>
   );
 }
@@ -219,7 +219,7 @@ export function Textarea({ className, ...rest }: React.TextareaHTMLAttributes<HT
   return (
     <textarea
       className={cn(
-        "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-soft",
+        "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-medium text-ink placeholder:font-normal placeholder:text-ink-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-soft",
         className,
       )}
       {...rest}
@@ -230,7 +230,7 @@ export function Textarea({ className, ...rest }: React.TextareaHTMLAttributes<HT
 export function Field({ label, hint, children, htmlFor }: { label: string; hint?: string; children: ReactNode; htmlFor?: string }) {
   return (
     <label className="block" htmlFor={htmlFor}>
-      <span className="mb-1.5 block text-[13px] font-medium text-ink-2">{label}</span>
+      <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{label}</span>
       {children}
       {hint && <span className="mt-1 block text-xs text-ink-muted">{hint}</span>}
     </label>
@@ -292,8 +292,8 @@ export function PageHeader({ title, sub, actions, eyebrow }: { title: ReactNode;
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow && <div className="eyebrow mb-1.5">{eyebrow}</div>}
-        <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-[26px]">{title}</h1>
-        {sub && <p className="mt-1 text-[13.5px] text-ink-muted">{sub}</p>}
+        <h1 className="text-[26px] font-extrabold leading-tight tracking-[-0.03em] text-ink sm:text-[32px]">{title}</h1>
+        {sub && <p className="mt-1.5 max-w-2xl text-[14.5px] font-medium text-ink-muted">{sub}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -303,8 +303,8 @@ export function PageHeader({ title, sub, actions, eyebrow }: { title: ReactNode;
 export function Stat({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: Tone }) {
   return (
     <div className="min-w-0">
-      <div className="text-[12.5px] text-ink-muted">{label}</div>
-      <div className={cn("mt-0.5 text-lg font-semibold tracking-[-0.01em]", tone === "bad" ? "text-bad" : tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : "text-ink")}>{value}</div>
+      <div className="text-[13px] font-semibold text-ink-muted">{label}</div>
+      <div className={cn("mt-1 text-[22px] font-extrabold tracking-[-0.02em]", tone === "bad" ? "text-bad" : tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : "text-ink")}>{value}</div>
       {sub && <div className="mt-0.5 text-xs text-ink-muted">{sub}</div>}
     </div>
   );

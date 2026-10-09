@@ -1,74 +1,36 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, ChevronDown, Clock3, MapPin, MessageCircle, PhoneCall, ShieldCheck, Smartphone, Wrench } from "lucide-react";
+import { ArrowRight, ChevronDown, MessageCircle, PhoneCall, Plus, ShieldCheck, Smartphone, Wrench } from "lucide-react";
 import { BRAND } from "@/config/brand";
-import { KITS, PRODUCTS, REQUIREMENTS, YEAR_LABEL, product } from "@/data/catalog";
+import { KITS, PRODUCTS, YEAR_LABEL, kitRawPrice } from "@/data/catalog";
 import type { YearOfStudy } from "@/data/types";
 import { cn } from "@/lib/cn";
-import { money, shortName } from "@/lib/format";
+import { money } from "@/lib/format";
+import { useStore } from "@/store/useStore";
 import { ProductArt } from "@/components/art/ProductArt";
 import { Avatar } from "@/components/ui/primitives";
-import { KitCard, ProductCard, Section } from "./parts";
-
-const YEAR_NOTE: Record<YearOfStudy, string> = {
-  1: "Carving, wax, your first coat",
-  2: "Typodont, operative and prosth labs",
-  3: "Fixed prosth and endodontics",
-  4: "Your first patients",
-  5: "Surgery and endo clinic",
-  6: "Loupes, turbine, scrubs",
-};
+import { CategoryCard, KitCard, ProductCard, Section, SeeAll, Stars } from "./parts";
 
 export default function StoreHome() {
   return (
     <>
       <Hero />
-      <TrustRow />
+      <StatsRow />
 
-      <Section className="mt-20" eyebrow="Shop by year" title="Start from where you are" sub="Each year's list is built from what faculties actually ask for, term by term.">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {([1, 2, 3, 4, 5, 6] as YearOfStudy[]).map((y) => (
-            <Link key={y} to={`/shop/requirements?year=${y}`} className="group flex flex-col justify-between rounded-2xl border border-line bg-surface p-4 shadow-card transition-all hover:-translate-y-0.5 hover:border-primary">
-              <div className="font-display text-[44px] leading-none text-ink">{y === 6 ? "Int." : `${y}${["st", "nd", "rd", "th", "th"][y - 1]}`}</div>
-              <div className="mt-6">
-                <div className="text-[13.5px] font-medium text-ink">{YEAR_LABEL[y]}</div>
-                <div className="mt-0.5 text-[12.5px] leading-snug text-ink-muted">{YEAR_NOTE[y]}</div>
-                <div className="mt-3 flex items-center gap-1 text-[12.5px] font-medium text-primary">
-                  {REQUIREMENTS[y].length} items <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                </div>
-              </div>
-            </Link>
-          ))}
+      <Section className="mt-16" title="Shop by category" sub="Find what your lab asks for in seconds." action={<SeeAll to="/shop/catalog">All products</SeeAll>}>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <CategoryCard to="/shop/catalog" label="Handpieces" sub="Turbines, motors, curing lights" art="handpiece" category="Handpieces & motors" />
+          <CategoryCard to="/shop/catalog" label="Instruments" sub="Hand sets, carvers, forceps" art="instruments" category="Hand instruments" active />
+          <CategoryCard to="/shop/catalog" label="Typodonts" sub="Jaws and practice teeth" art="typodont" category="Typodonts & teeth" />
+          <CategoryCard to="/shop/catalog" label="Endo" sub="Files, points, rubber dam" art="files" category="Endo" />
         </div>
       </Section>
 
-      <Section
-        className="mt-20"
-        eyebrow="Kits"
-        title="Whole kits, priced below the parts"
-        sub="Everything a course asks for in one box, checked before it leaves."
-        action={
-          <Link to="/shop/catalog" className="inline-flex items-center gap-1 text-[14px] font-medium text-primary hover:underline">
-            All products <ArrowRight className="h-4 w-4" />
-          </Link>
-        }
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[KITS[1], KITS[3], KITS[4], KITS[5]].map((k) => (
-            <KitCard key={k.id} k={k} />
-          ))}
-        </div>
-      </Section>
+      <HotPicks />
+
+      <PromoRow />
 
       <RepairBlock />
-
-      <Section className="mt-20" eyebrow="Most asked for this week" title="Back-to-term favourites">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
-          {["p04", "p22", "p01", "p36", "p33", "p06", "p38", "p39"].map((id) => (
-            <ProductCard key={id} p={PRODUCTS.find((p) => p.id === id)!} />
-          ))}
-        </div>
-      </Section>
 
       <Reviews />
       <Faq />
@@ -77,202 +39,209 @@ export default function StoreHome() {
   );
 }
 
+/* ------------------------------------------------------------------- hero */
+
 function Hero() {
-  const req = REQUIREMENTS[3].slice(0, 6);
+  const add = useStore((s) => s.addToCart);
+  const micromotor = PRODUCTS.find((p) => p.id === "p04")!;
   return (
-    <section className="relative overflow-hidden">
-      <div className="dot-ground absolute inset-0 opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent)]" aria-hidden />
-      <div className="relative mx-auto grid grid-cols-1 max-w-[1240px] gap-12 px-4 pb-10 pt-12 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:pt-20">
-        <div>
-          <div className="eyebrow">For dental students in Cairo</div>
-          <h1 className="mt-4 font-display text-[52px] leading-[0.95] tracking-[-0.015em] text-ink sm:text-[68px] lg:text-[76px]">
-            Your requirements list, <em className="text-primary">handled.</em>
+    <section className="mx-auto max-w-[1240px] px-4 pt-4 sm:px-6">
+      <div className="hero-ground relative overflow-hidden rounded-[32px] px-6 pb-8 pt-10 sm:px-12 sm:pb-12 sm:pt-14">
+        <div className="relative z-10 max-w-[560px]">
+          <span className="inline-flex items-center gap-2 rounded-full bg-surface/80 px-3 py-1.5 text-[12.5px] font-bold text-ink">
+            <span className="h-2 w-2 rounded-full bg-primary" /> For dental students in Cairo
+          </span>
+          <h1 className="mt-5 text-[44px] font-extrabold leading-[1] tracking-[-0.045em] text-ink sm:text-[64px]">
+            Your requirements list, <span className="text-primary">handled.</span>
           </h1>
-          <p className="mt-6 max-w-[34rem] text-[16.5px] leading-relaxed text-ink-2">
-            Instruments, materials and kits for every year of dental school, delivered to your faculty gate. When a handpiece breaks, we take it to the service centre, lend you one meanwhile, and bring it back fixed.
+          <p className="mt-5 max-w-[30rem] text-[16px] font-medium leading-relaxed text-ink-2">
+            Kits and tools for every year, delivered to your faculty gate. If something breaks, we get it fixed for you.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/shop/requirements" className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-6 text-[15px] font-medium text-primary-ink shadow-card hover:bg-primary-hover">
-              Build my requirements list <ArrowRight className="h-4 w-4" />
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link to="/shop/requirements" className="inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-bold text-surface hover:opacity-90">
+              Build my list <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link to="/shop/catalog" className="inline-flex h-12 items-center rounded-xl border border-line bg-surface px-6 text-[15px] font-medium text-ink hover:border-line-strong">
-              Browse the shop
+            <Link to="/shop/catalog" className="inline-flex h-12 items-center rounded-full bg-surface px-6 text-[15px] font-bold text-ink hover:bg-surface/80">
+              Shop all
             </Link>
           </div>
         </div>
 
-        {/* composite: list + tracking + reply */}
-        <div className="relative mx-auto w-full max-w-[460px]">
-          <div className="rounded-3xl border border-line bg-surface p-5 shadow-pop sm:pb-20">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[12px] text-ink-muted">Ain Shams · 3rd year</div>
-                <div className="font-display text-[26px] leading-tight text-ink">Requirements</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[22px] font-semibold text-ink">9/12</div>
-                <div className="text-[12px] text-ink-muted">ready</div>
-              </div>
-            </div>
-            <div className="mt-3 h-1.5 rounded-full bg-surface-3">
-              <div className="h-full w-3/4 rounded-full bg-primary" />
-            </div>
-            <ul className="mt-4 grid grid-cols-1 gap-1">
-              {req.map((r, i) => {
-                const p = product(r.productId);
-                const done = i !== 2 && i !== 4;
-                return (
-                  <li key={r.productId} className="flex items-center gap-3 rounded-xl px-1 py-1.5">
-                    <ProductArt kind={p.art} category={p.category} size={38} />
-                    <span className={cn("min-w-0 flex-1 truncate text-[13.5px]", done ? "text-ink-muted" : "text-ink")}>{shortName(p.name)}</span>
-                    {done ? (
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-good-soft text-good">
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                    ) : (
-                      <span className="text-[13px] font-medium text-ink tnum">{money(p.price * r.qty)}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-          <div className="absolute -left-4 bottom-[-26px] hidden w-[250px] rotate-[-2deg] rounded-2xl border border-line bg-surface p-3.5 shadow-pop sm:block lg:-left-14">
-            <div className="flex items-center gap-2 text-[12px] text-ink-muted">
-              <Wrench className="h-3.5 w-3.5 text-primary" /> <span className="font-mono">RP-1209</span>
-            </div>
-            <div className="mt-1 text-[14px] font-medium text-ink">Pana-Max handpiece</div>
-            <div className="mt-2 flex gap-1">
-              {[1, 1, 1, 1, 0, 0].map((x, i) => (
-                <span key={i} className={cn("h-1.5 flex-1 rounded-full", x ? "bg-primary" : "bg-surface-3")} />
-              ))}
-            </div>
-            <div className="mt-1.5 text-[12px] text-ink-2">Being repaired · back Saturday</div>
-          </div>
-          <div className="absolute -right-3 -top-[88px] hidden max-w-[220px] rotate-[2deg] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-[13px] text-primary-ink shadow-pop sm:block lg:-right-10">
-            Yes, it's covered by warranty. I'll pick it up at 1pm and leave you a loaner.
-            <div className="mt-1 text-right text-[10.5px] opacity-75">{BRAND.owner.name} · replied in 4 min</div>
-          </div>
+        {/* big illustration */}
+        <div className="pointer-events-none absolute -right-10 bottom-0 top-0 hidden w-[52%] items-center justify-center md:flex" aria-hidden>
+          <div className="absolute h-[440px] w-[440px] rounded-full bg-surface/50" />
+          <div className="absolute h-[300px] w-[300px] rounded-full bg-surface/70" />
+          <ProductArt kind="handpiece" category="Handpieces & motors" fluid tile={false} className="relative aspect-square w-[78%] [&_svg]:w-[80%] text-ink" />
+        </div>
+
+        {/* small product card, like the watch card */}
+        <div className="absolute bottom-6 right-6 hidden w-[200px] rounded-[22px] bg-surface p-3 shadow-pop lg:block">
+          <ProductArt kind={micromotor.art} category={micromotor.category} fluid className="aspect-[4/3] w-full rounded-2xl" />
+          <div className="mt-2 px-1 text-[13px] font-bold leading-snug text-ink">Strong 204 micromotor</div>
+          <button type="button" onClick={() => add(micromotor.id)} className="pointer-events-auto mt-2 flex h-9 w-full items-center justify-center gap-1 rounded-full bg-ink text-[13px] font-bold text-surface hover:opacity-90">
+            <Plus className="h-4 w-4" /> {money(micromotor.price)}
+          </button>
         </div>
       </div>
     </section>
   );
 }
 
-function TrustRow() {
-  const items = [
-    { Icon: MapPin, title: "Delivered to your gate", body: "7 faculties, free hand-over" },
-    { Icon: Wrench, title: "Repairs handled for you", body: "Pickup, loaner, approval, return" },
-    { Icon: ShieldCheck, title: "Genuine, with warranty", body: "NSK, Woodpecker, Medesy and more" },
-    { Icon: Clock3, title: "A real person answers", body: "Usually within 6 minutes" },
+/* ------------------------------------------------------------- stats row */
+
+function StatsRow() {
+  const stats = [
+    ["7", "faculties we deliver to"],
+    ["1,200+", "students served"],
+    ["4.8", "average rating"],
+    ["6 min", "average reply time"],
   ];
   return (
-    <div className="mx-auto mt-10 max-w-[1240px] px-4 sm:px-6">
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
-        {items.map((i) => (
-          <div key={i.title} className="flex items-start gap-3 bg-surface p-4 sm:p-5">
-            <i.Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-            <div>
-              <div className="text-[14px] font-medium text-ink">{i.title}</div>
-              <div className="text-[12.5px] text-ink-muted">{i.body}</div>
-            </div>
+    <section className="mx-auto mt-10 max-w-[1240px] px-4 sm:px-6">
+      <div className="grid grid-cols-2 gap-y-6 lg:grid-cols-4">
+        {stats.map(([n, l], i) => (
+          <div key={l} className={cn("flex items-center gap-3 px-2 sm:px-6", i > 0 && "lg:border-l lg:border-line")}>
+            <span className="whitespace-nowrap text-[28px] font-extrabold tracking-[-0.04em] text-ink sm:text-[44px]">{n}</span>
+            <span className="max-w-[7rem] text-[13px] font-semibold leading-tight text-ink-muted">{l}</span>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
+/* ------------------------------------------------------------- hot picks */
+
+const PICKS: Record<number, string[]> = {
+  2: ["p22", "p10", "p04"],
+  3: ["p36", "p03", "p33"],
+  4: ["p06", "p26", "p14"],
+  5: ["p15", "p07", "p08"],
+  6: ["p38", "p01", "p40"],
+};
+
+function HotPicks() {
+  const [year, setYear] = useState<YearOfStudy>(3);
+  const kit = KITS.find((k) => k.year === year) ?? KITS[0];
+  return (
+    <Section
+      className="mt-16"
+      title="Hot picks for you"
+      sub="What students in your year are ordering this week."
+      action={
+        <div className="no-scrollbar -mb-4 flex gap-5 overflow-x-auto">
+          {([2, 3, 4, 5, 6] as YearOfStudy[]).map((y) => (
+            <button key={y} type="button" onClick={() => setYear(y)} className={cn("shrink-0 border-b-2 pb-3.5 text-[14px] font-bold transition-colors", year === y ? "border-primary text-primary" : "border-transparent text-ink-muted hover:text-ink")}>
+              {YEAR_LABEL[y]}
+            </button>
+          ))}
+        </div>
+      }
+    >
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4">
+        {PICKS[year].map((id) => (
+          <ProductCard key={id} p={PRODUCTS.find((p) => p.id === id)!} />
+        ))}
+        <Link to={`/shop/catalog?year=${year}`} className="group relative col-span-2 flex min-h-[260px] flex-col justify-end overflow-hidden rounded-[22px] bg-gradient-to-br from-[#7b6cf6] via-[#5b47e6] to-[#2a78d6] p-6 text-white lg:col-span-1">
+          <ProductArt kind="kit" category="Kit" fluid tile={false} className="absolute -right-6 -top-4 aspect-square w-[75%] text-white/90 [&_svg]:w-[70%]" />
+          <div className="relative">
+            <div className="text-[20px] font-extrabold leading-tight tracking-[-0.02em]">The whole {YEAR_LABEL[year]} kit</div>
+            <div className="mt-1 text-[13px] font-semibold text-white/80">
+              {kit.items.length} items · save {money(kitRawPrice(kit) - kit.price)}
+            </div>
+            <span className="mt-4 inline-flex h-10 items-center gap-1.5 rounded-full bg-white px-4 text-[13.5px] font-bold text-ink">
+              View kit <ArrowRight className="h-4 w-4" />
+            </span>
+          </div>
+        </Link>
+      </div>
+    </Section>
+  );
+}
+
+/* ------------------------------------------------------------- promo row */
+
+function PromoRow() {
+  return (
+    <section className="mx-auto mt-16 grid max-w-[1240px] grid-cols-1 gap-4 px-4 sm:px-6 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {KITS.slice(1, 3).map((k) => (
+          <KitCard key={k.id} k={k} />
+        ))}
+      </div>
+      <div className="hero-ground flex flex-col justify-between rounded-[22px] p-7">
+        <div>
+          <div className="text-[12.5px] font-bold text-primary">This term only</div>
+          <h3 className="mt-2 text-[30px] font-extrabold leading-[1.05] tracking-[-0.035em] text-ink">Save up to 8% when you buy the whole kit.</h3>
+          <p className="mt-3 text-[14px] font-medium text-ink-2">Every item your course lists, in one box, checked before it leaves.</p>
+        </div>
+        <Link to="/shop/requirements" className="mt-6 inline-flex h-11 w-fit items-center gap-2 rounded-full bg-ink px-5 text-[14px] font-bold text-surface hover:opacity-90">
+          Find my year's kit <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------------------------------------- repair block */
+
 function RepairBlock() {
   const steps = [
-    { t: "We collect it", b: "From your faculty gate, the same day when you message before 2pm." },
-    { t: "You keep working", b: "Take a loaner turbine so you don't miss a practical." },
-    { t: "You approve the price", b: "The service centre diagnoses it. Nothing is repaired until you say yes." },
-    { t: "Back in your hands", b: "Tested on our bench, returned to your gate, with a repair warranty." },
+    { t: "We pick it up", b: "From your faculty gate, the same day you message us.", art: "handpiece" as const },
+    { t: "You get a loaner", b: "So you never miss a practical while it's away.", art: "contra" as const },
+    { t: "You OK the price", b: "Nothing is repaired until you say yes. Then it comes back tested.", art: "micromotor" as const },
   ];
   return (
-    <section className="mt-24 bg-side py-16 text-side-ink sm:py-20">
-      <div className="mx-auto grid grid-cols-1 max-w-[1240px] gap-12 px-4 sm:px-6 lg:grid-cols-[1fr_1fr] lg:items-center">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-side-active">Repair concierge</div>
-          <h2 className="mt-3 font-display text-[40px] leading-[1.02] sm:text-[54px]">Broken handpiece the week before your practical?</h2>
-          <p className="mt-4 max-w-lg text-[15.5px] leading-relaxed text-side-muted">This is the part nobody else does. We deal with the service centre, chase them, and keep you updated, so you don't have to.</p>
-          <ol className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
-            {steps.map((s, i) => (
-              <li key={s.t} className="flex gap-3">
-                <span className="font-display text-[30px] leading-none text-side-active">{i + 1}</span>
-                <div>
-                  <div className="text-[15px] font-medium">{s.t}</div>
-                  <div className="mt-1 text-[13.5px] leading-relaxed text-side-muted">{s.b}</div>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Link to="/shop/repair" className="inline-flex h-12 items-center gap-2 rounded-xl bg-side-active px-6 text-[15px] font-medium text-side hover:brightness-105">
-              Start a repair <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link to="/shop/track" className="inline-flex h-12 items-center rounded-xl border border-side-2 px-6 text-[15px] font-medium text-side-ink hover:border-side-muted">
-              Track a repair
-            </Link>
-          </div>
+    <section className="mx-auto mt-16 max-w-[1240px] px-4 sm:px-6">
+      <div className="rounded-[32px] bg-side p-6 text-side-ink sm:p-10">
+        <div className="flex flex-col gap-4 border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
+          <h2 className="max-w-xl text-[32px] font-extrabold leading-[1.05] tracking-[-0.035em] sm:text-[42px]">Something broke? We fix it. You keep studying.</h2>
+          <p className="max-w-sm text-[14.5px] font-medium text-side-muted">We deal with the service centre, chase them, and keep you updated. No other supplier does this.</p>
         </div>
-        <div className="mx-auto w-full max-w-[440px] rounded-3xl bg-surface p-6 text-ink shadow-pop">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-mono text-[12.5px] text-ink-muted">RP-1204</div>
-              <div className="mt-0.5 text-[17px] font-semibold">Pana-Max high-speed handpiece</div>
+        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {steps.map((s) => (
+            <div key={s.t} className="rounded-[22px] bg-side-2 p-3">
+              <ProductArt kind={s.art} category="Handpieces & motors" fluid className="aspect-[16/10] w-full rounded-2xl" />
+              <div className="px-2 pb-2 pt-4">
+                <div className="text-[18px] font-extrabold">{s.t}</div>
+                <p className="mt-1 text-[13.5px] font-medium leading-relaxed text-side-muted">{s.b}</p>
+              </div>
             </div>
-            <ProductArt kind="handpiece" category="Handpieces & motors" size={56} />
-          </div>
-          <div className="mt-5 rounded-2xl bg-warn-soft p-4">
-            <div className="text-[13.5px] font-medium">The service centre found a worn water line</div>
-            <div className="mt-1 text-[13px] text-ink-2">New O-rings and line, 3-month repair warranty. Ready 2 days after you approve.</div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-[20px] font-semibold tnum">EGP 850</span>
-              <span className="flex gap-2">
-                <span className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px]">Call me</span>
-                <span className="rounded-lg bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-ink">Approve</span>
-              </span>
-            </div>
-          </div>
-          <ol className="mt-5 grid grid-cols-1 gap-3 text-[13.5px]">
-            {[
-              ["Picked up at MSA", "Tue 13:10", true],
-              ["At NSK authorised service", "Tue 18:00", true],
-              ["Diagnosed · waiting for your OK", "Wed 15:40", true],
-              ["Repaired and tested", "Expected Fri", false],
-            ].map(([t, d, done]) => (
-              <li key={t as string} className="flex items-center gap-3">
-                <span className={cn("flex h-5 w-5 items-center justify-center rounded-full", done ? "bg-primary text-primary-ink" : "border border-line-strong")}>{done && <Check className="h-3 w-3" />}</span>
-                <span className={cn("flex-1", done ? "text-ink" : "text-ink-muted")}>{t}</span>
-                <span className="text-[12px] text-ink-muted">{d}</span>
-              </li>
-            ))}
-          </ol>
+          ))}
+        </div>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link to="/shop/repair" className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold text-[#121218] hover:opacity-90">
+            <Wrench className="h-4 w-4" /> Start a repair
+          </Link>
+          <Link to="/shop/track" className="inline-flex h-12 items-center rounded-full border border-white/20 px-6 text-[15px] font-bold text-side-ink hover:bg-white/10">
+            Track a repair
+          </Link>
         </div>
       </div>
     </section>
   );
 }
 
+/* ---------------------------------------------------------------- reviews */
+
 function Reviews() {
   const r = [
-    { q: "My micromotor died two days before the prosth practical. He picked it up from Kasr Al Ainy, gave me a loaner and had it back by Sunday.", n: "Nour H.", m: "Cairo University · 2nd year" },
-    { q: "I sent a photo of our requirements list and had a full quote in half an hour. Everything came in one box, labelled.", n: "Omar F.", m: "Ain Shams · 3rd year" },
+    { q: "My micromotor died two days before the prosth practical. He picked it up, gave me a loaner and had it back by Sunday.", n: "Nour H.", m: "Cairo University · 2nd year" },
+    { q: "I sent a photo of our requirements list and had a full quote in half an hour. Everything came in one box.", n: "Omar F.", m: "Ain Shams · 3rd year" },
     { q: "Not the cheapest, and I don't care. When something's wrong he answers, and he sorts it out.", n: "Yasmin H.", m: "Cairo University · 5th year" },
   ];
   return (
-    <Section className="mt-24" eyebrow="Sample reviews" title="Why students pay a little more">
+    <Section className="mt-16" title="Students love the service" sub="Sample reviews for the prototype.">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {r.map((x) => (
-          <figure key={x.n} className="flex flex-col rounded-2xl border border-line bg-surface p-6 shadow-card">
-            <blockquote className="flex-1 font-display text-[22px] leading-snug text-ink">“{x.q}”</blockquote>
+        {r.map((x, i) => (
+          <figure key={x.n} className={cn("flex flex-col rounded-[22px] p-6", ["bg-tint-sky", "bg-tint-lemon", "bg-tint-mint"][i])}>
+            <Stars value={5} />
+            <blockquote className="mt-3 flex-1 text-[16px] font-semibold leading-relaxed text-ink">“{x.q}”</blockquote>
             <figcaption className="mt-5 flex items-center gap-3">
-              <Avatar name={x.n} size={34} />
+              <Avatar name={x.n} size={38} />
               <span>
-                <span className="block text-[13.5px] font-medium text-ink">{x.n}</span>
-                <span className="text-[12.5px] text-ink-muted">{x.m}</span>
+                <span className="block text-[14px] font-bold text-ink">{x.n}</span>
+                <span className="text-[12.5px] font-semibold text-ink-muted">{x.m}</span>
               </span>
             </figcaption>
           </figure>
@@ -285,22 +254,23 @@ function Reviews() {
 function Faq() {
   const items = [
     ["How do I pay?", "InstaPay, Vodafone Cash, card, or cash when you receive your order. You get a receipt on WhatsApp either way."],
-    ["When will my order arrive?", "Items in stock reach your faculty gate within 48 hours. If something needs ordering from a supplier, you'll see the exact date before you confirm."],
+    ["When will my order arrive?", "Items in stock reach your faculty gate within 48 hours. If something needs ordering, you'll see the exact date before you confirm."],
     ["What if something is faulty?", "Message us. Anything under warranty is replaced or repaired at no cost, and we handle the service centre for you."],
-    ["Our class wants to order together", "Class reps get one quote for the whole batch, a group price, and a single delivery to the faculty. Message us with the number of students."],
-    ["Do you deliver outside campus?", "Yes, by courier anywhere in Greater Cairo for EGP 75."],
+    ["Our class wants to order together", "Class reps get one quote for the whole batch, a group price, and a single delivery to the faculty."],
   ];
   const [open, setOpen] = useState(0);
   return (
-    <Section className="mt-24" eyebrow="Questions" title="Before you ask">
-      <div className="divide-y divide-line rounded-2xl border border-line bg-surface">
+    <Section className="mt-16" title="Questions">
+      <div className="grid grid-cols-1 gap-3">
         {items.map(([q, a], i) => (
-          <div key={q}>
-            <button type="button" onClick={() => setOpen(open === i ? -1 : i)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left" aria-expanded={open === i}>
-              <span className="text-[15.5px] font-medium text-ink">{q}</span>
-              <ChevronDown className={cn("h-5 w-5 shrink-0 text-ink-muted transition-transform", open === i && "rotate-180")} />
+          <div key={q} className="rounded-[22px] bg-surface shadow-card">
+            <button type="button" onClick={() => setOpen(open === i ? -1 : i)} className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left" aria-expanded={open === i}>
+              <span className="text-[16px] font-bold text-ink">{q}</span>
+              <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-3 transition-transform", open === i && "rotate-180")}>
+                <ChevronDown className="h-4 w-4" />
+              </span>
             </button>
-            {open === i && <p className="max-w-3xl px-5 pb-5 text-[14.5px] leading-relaxed text-ink-2">{a}</p>}
+            {open === i && <p className="max-w-3xl px-6 pb-5 text-[14.5px] font-medium leading-relaxed text-ink-2">{a}</p>}
           </div>
         ))}
       </div>
@@ -310,33 +280,30 @@ function Faq() {
 
 function ContactStrip() {
   return (
-    <section className="mx-auto mt-24 max-w-[1240px] px-4 sm:px-6">
-      <div className="grid grid-cols-1 gap-6 rounded-3xl border border-line bg-surface p-8 shadow-card md:grid-cols-[1.2fr_1fr] md:items-center">
+    <section className="mx-auto mt-16 max-w-[1240px] px-4 sm:px-6">
+      <div className="flex flex-col gap-6 rounded-[32px] bg-ink p-8 text-surface md:flex-row md:items-center md:justify-between sm:p-10">
         <div className="flex items-center gap-4">
-          <Avatar name={BRAND.owner.fullName} size={64} />
+          <Avatar name={BRAND.owner.fullName} size={60} />
           <div>
-            <h2 className="font-display text-[34px] leading-tight text-ink">Talk to {BRAND.owner.name}</h2>
-            <p className="text-[14.5px] text-ink-2">Not a call centre. The same person who packs your order.</p>
+            <h2 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em]">Talk to {BRAND.owner.name}</h2>
+            <p className="text-[14.5px] font-medium text-surface/70">The same person who packs your order. Replies in about 6 minutes.</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <div className="flex flex-col items-start gap-1 rounded-xl border border-line p-3.5">
-            <MessageCircle className="h-5 w-5 text-primary" />
-            <span className="text-[13.5px] font-medium text-ink">Chat</span>
-            <span className="text-[12px] text-ink-muted">Bottom right of any page</span>
-          </div>
-          <div className="flex flex-col items-start gap-1 rounded-xl border border-line p-3.5">
-            <PhoneCall className="h-5 w-5 text-primary" />
-            <span className="text-[13.5px] font-medium text-ink">Call back</span>
-            <span className="text-[12px] text-ink-muted">Pick a time in the chat</span>
-          </div>
-          <div className="flex flex-col items-start gap-1 rounded-xl border border-line p-3.5">
-            <Smartphone className="h-5 w-5 text-primary" />
-            <span className="text-[13.5px] font-medium text-ink">WhatsApp</span>
-            <span className="select-all font-mono text-[12px] text-ink-2">{BRAND.whatsapp}</span>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex h-11 items-center gap-2 rounded-full bg-surface px-5 text-[14px] font-bold text-ink">
+            <MessageCircle className="h-4 w-4" /> Chat (bottom right)
+          </span>
+          <span className="inline-flex h-11 items-center gap-2 rounded-full border border-surface/25 px-5 text-[14px] font-bold">
+            <PhoneCall className="h-4 w-4" /> Call back
+          </span>
+          <span className="inline-flex h-11 select-all items-center gap-2 rounded-full border border-surface/25 px-5 text-[14px] font-bold">
+            <Smartphone className="h-4 w-4" /> {BRAND.whatsapp}
+          </span>
         </div>
       </div>
+      <p className="mt-4 flex items-center justify-center gap-1.5 text-[12.5px] font-semibold text-ink-muted">
+        <ShieldCheck className="h-4 w-4" /> Genuine brands with warranty · free delivery to your faculty gate
+      </p>
     </section>
   );
 }

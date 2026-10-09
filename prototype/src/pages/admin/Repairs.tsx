@@ -72,11 +72,11 @@ export default function RepairsPage() {
                   setDrag(null);
                   setOver(null);
                 }}
-                className={cn("flex w-[264px] shrink-0 flex-col rounded-2xl border bg-surface-2", over === st.id ? "border-primary bg-primary-soft/40" : "border-line")}
+                className={cn("flex w-[264px] shrink-0 flex-col rounded-[22px]", over === st.id ? "bg-primary-soft" : "bg-surface-3/70")}
               >
-                <div className="flex items-center justify-between px-3 pb-2 pt-3">
-                  <span className="text-[13.5px] font-semibold text-ink">{st.label}</span>
-                  <span className="rounded-full bg-surface px-2 py-0.5 text-[12px] font-semibold text-ink-2 ring-1 ring-line tnum">{list.length}</span>
+                <div className="flex items-center justify-between px-4 pb-2 pt-4">
+                  <span className="text-[15px] font-extrabold text-ink">{st.label}</span>
+                  <span className="rounded-full bg-surface px-2.5 py-0.5 text-[12.5px] font-bold text-ink-2 tnum">{list.length}</span>
                 </div>
                 <div className="flex min-h-[120px] flex-col gap-2 px-2 pb-2">
                   {list.map((r) => (
@@ -155,7 +155,7 @@ function RepairCard({ r, onOpen, onDragStart }: { r: Repair; onOpen: () => void;
       }}
       onClick={onOpen}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen())}
-      className="w-full cursor-grab rounded-xl border border-line bg-surface p-3 text-left shadow-card transition-all hover:-translate-y-px hover:border-line-strong">
+      className="w-full cursor-grab rounded-2xl bg-surface p-3.5 text-left shadow-card transition-all hover:-translate-y-px">
       <div className="flex items-center justify-between">
         <Mono>{r.id}</Mono>
         {active ? (

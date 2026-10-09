@@ -232,7 +232,7 @@ export function ColumnChart({
   const iw = Math.max(0, w - m.l - m.r);
   const ih = height - m.t - m.b;
   const band = iw / data.length;
-  const bw = Math.min(24, band * 0.62);
+  const bw = Math.min(28, band * 0.6);
   const y = (v: number) => m.t + ih - (v / top) * ih;
   const maxI = data.reduce((bi, d, i) => (d.value > data[bi].value ? i : bi), 0);
 
@@ -252,11 +252,12 @@ export function ColumnChart({
             const cx = m.l + band * i + band / 2;
             const h = (d.value / top) * ih;
             const dim = hover !== null && hover !== i;
-            const fill = highlightLast && i !== data.length - 1 ? "var(--chart-muted)" : color;
+            const rest = highlightLast && i !== data.length - 1;
+            const fill = color;
             return (
               <g key={i} onPointerEnter={() => setHover(i)} onPointerLeave={() => setHover(null)}>
                 <rect x={m.l + band * i} y={m.t} width={band} height={ih} fill="transparent" />
-                <path d={colPath(cx - bw / 2, y(d.value), bw, h)} fill={fill} opacity={dim ? 0.45 : 1} />
+                <path d={colPath(cx - bw / 2, y(d.value), bw, h, 6)} fill={fill} opacity={dim ? 0.2 : rest ? 0.32 : 1} />
                 {(i === maxI || (highlightLast && i === data.length - 1)) && d.value > 0 && (
                   <text x={cx} y={y(d.value) - 5} textAnchor="middle" fontSize="11" fill="var(--ink-2)" className="tnum">
                     {format(d.value)}

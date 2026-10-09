@@ -57,6 +57,29 @@ Deeper metrics live in **Reports**: revenue by month, university and year of stu
 - **Academic calendar:** Term 1 starting late September, exams in January, term 2 from February, finals May–June, summer quiet. The sample data follows this pattern.
 - **Invoicing:** The system creates invoices and syncs them to his existing invoicing app, so nothing breaks during the switch.
 
+## Round 2: simpler, friendlier UX
+
+Feedback on the first version: the type felt thin and too corporate, and screens showed too much data. The owner shared three references: a lavender e-commerce store with big image cards, a pastel crypto dashboard with a dark icon rail, and a soft-blue dental clinic site.
+
+What the research says, and what changed:
+
+| Finding | Change |
+|---|---|
+| Light font weights hurt legibility, especially on phones; 400+ for body and bold for headings is the safe default (Penn State accessibility, WebAIM). | One friendly typeface (Plus Jakarta Sans) everywhere, body at 500, headings at 700–800. No thin serif. |
+| Keep the first screen to one job and about five metrics; push the rest to drill-downs (progressive disclosure, NN/g; Improvado dashboard guide; Shopify app guidelines on focused pages). | The home screen went from 14 blocks to 7: four numbers, a to-do list, who's waiting, today's route. Charts, categories, aging and stock moved to their own pages. |
+| Bento-style dashboards use tile size for priority and 12–24 px rounded cards; one idea per tile. | Big sales card, three pastel number cards, rounded 22–32 px corners, pill buttons. |
+| Shoppers need range and distinctiveness on the homepage, with scannable product cards (Baymard). | Category cards with one big picture each, product cards with price, stock badge and an "Add to bag" pill, a stats row, one dark section for the repair service. |
+
+Sources for this round:
+- Penn State Accessibility: beware light weight fonts — https://accessibility.psu.edu/2021/10/beware-light-weight-fonts
+- WebAIM: fonts — https://webaim.org/techniques/fonts/
+- Nielsen Norman Group: managing visual complexity — https://www.nngroup.com/videos/managing-visual-complexity/
+- Improvado: dashboard design guide — https://improvado.io/blog/dashboard-design-guide
+- Shopify app design guidelines — https://shopify.dev/docs/apps/design-guidelines
+- Baymard: 35 ecommerce best practices — https://baymard.com/learn/ecommerce-best-practices
+- Baymard: product list item design — https://baymard.com/research-articles/list-item-design-ecommerce
+- Font comparison: Plus Jakarta Sans vs Inter — https://madegooddesigns.com/plus-jakarta-vs-inter/
+
 ## Questions to ask him before building
 
 1. Which invoicing app is it, and does it have an API or export?

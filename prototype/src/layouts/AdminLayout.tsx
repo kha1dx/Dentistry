@@ -25,11 +25,11 @@ import {
 import { BRAND } from "@/config/brand";
 import { cn } from "@/lib/cn";
 import { ago } from "@/lib/format";
-import { isActiveRepair, isOpen, outstanding, daysOverdue, waitingSince } from "@/lib/metrics";
+import { isActiveRepair, isOpen, waitingSince } from "@/lib/metrics";
 import { useTheme } from "@/lib/theme";
 import { useStore } from "@/store/useStore";
 import { Avatar, Badge, Kbd } from "@/components/ui/primitives";
-import { Logo } from "@/components/ui/Logo";
+import { Logo, LogoMark } from "@/components/ui/Logo";
 import { Modal, Popover } from "@/components/ui/overlays";
 import { ProductArt } from "@/components/art/ProductArt";
 
@@ -46,12 +46,10 @@ function useNav(): NavItem[][] {
   const conversations = useStore((s) => s.conversations);
   const orders = useStore((s) => s.orders);
   const repairs = useStore((s) => s.repairs);
-  const invoices = useStore((s) => s.invoices);
   return useMemo(() => {
     const waiting = conversations.filter((c) => waitingSince(c)).length;
     const open = orders.filter(isOpen).length;
     const active = repairs.filter(isActiveRepair).length;
-    const overdue = invoices.filter((i) => outstanding(i) > 0 && daysOverdue(i) > 0).length;
     return [
       [
         { to: "/admin", label: "Today", Icon: LayoutGrid, end: true },
@@ -61,15 +59,15 @@ function useNav(): NavItem[][] {
       ],
       [
         { to: "/admin/clients", label: "Clients", Icon: Contact },
-        { to: "/admin/catalog", label: "Catalog & pricing", Icon: Package },
-        { to: "/admin/invoices", label: "Invoices & payments", Icon: Receipt, count: overdue, alert: overdue > 0 },
-        { to: "/admin/messaging", label: "Messages & automations", Icon: Zap },
-        { to: "/admin/partners", label: "Suppliers & partners", Icon: Handshake },
+        { to: "/admin/catalog", label: "Products", Icon: Package },
+        { to: "/admin/invoices", label: "Invoices", Icon: Receipt },
+        { to: "/admin/messaging", label: "Automations", Icon: Zap },
+        { to: "/admin/partners", label: "Suppliers", Icon: Handshake },
         { to: "/admin/reports", label: "Reports", Icon: BarChart3 },
       ],
       [{ to: "/admin/settings", label: "Settings", Icon: Settings }],
     ];
-  }, [conversations, orders, repairs, invoices]);
+  }, [conversations, orders, repairs]);
 }
 
 function SideLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
@@ -80,20 +78,20 @@ function SideLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
       onClick={onClick}
       className={({ isActive }) =>
         cn(
-          "group flex h-9 items-center gap-3 rounded-[10px] px-2.5 text-[13.5px] font-medium transition-colors",
-          isActive ? "bg-side-2 text-side-ink" : "text-side-muted hover:bg-side-2/60 hover:text-side-ink",
+          "group flex h-11 items-center gap-3 rounded-full px-4 text-[14px] font-semibold transition-colors",
+          isActive ? "bg-nav-active text-nav-active-ink" : "text-nav-muted hover:bg-nav-hover hover:text-nav-ink",
         )
       }
     >
       {({ isActive }) => (
         <>
-          <item.Icon className={cn("h-[17px] w-[17px] shrink-0", isActive ? "text-side-active" : "")} />
+          <item.Icon className={cn("h-[19px] w-[19px] shrink-0", isActive ? "text-nav-active-ink" : "")} strokeWidth={2.2} />
           <span className="flex-1 truncate">{item.label}</span>
           {!!item.count && (
             <span
               className={cn(
-                "min-w-[22px] rounded-full px-1.5 py-px text-center text-[11px] font-semibold tnum",
-                item.alert ? "bg-side-active text-side" : "bg-side-2 text-side-muted group-hover:text-side-ink",
+                "min-w-[24px] rounded-full px-2 py-0.5 text-center text-[11.5px] font-bold tnum",
+                item.alert ? "bg-bad text-white" : isActive ? "bg-surface text-nav-active-ink" : "bg-surface-3 text-nav-muted",
               )}
             >
               {item.count}
@@ -108,38 +106,75 @@ function SideLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const groups = useNav();
   return (
-    <div className="flex h-full flex-col bg-side px-3 pb-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
-      <div className="flex items-center justify-between px-2 pb-5">
+    <div className="flex h-full flex-col border-r border-line/70 bg-nav px-4 pb-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 20px)" }}>
+      <div className="flex items-center justify-between px-2 pb-7">
         <Link to="/admin" onClick={onNavigate}>
-          <Logo tone="light" sub="Console" />
+          <Logo sub="Console" />
         </Link>
       </div>
-      <nav className="flex flex-1 flex-col gap-5 overflow-y-auto scroll-thin" aria-label="Console">
+      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto scroll-thin" aria-label="Console">
         {groups.map((g, i) => (
-          <div key={i} className="flex flex-col gap-0.5">
-            {i === 1 && <div className="px-2.5 pb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-side-muted/70">Business</div>}
+          <div key={i} className="flex flex-col gap-1">
+            {i === 1 && <div className="px-4 pb-1 text-[11.5px] font-bold uppercase tracking-[0.08em] text-nav-muted/80">Business</div>}
             {g.map((item) => (
               <SideLink key={item.to} item={item} onClick={onNavigate} />
             ))}
           </div>
         ))}
       </nav>
-      <div className="mt-3 flex flex-col gap-2">
-        <Link
-          to="/shop"
-          className="flex items-center gap-2.5 rounded-xl border border-side-2 px-3 py-2.5 text-[13px] text-side-muted transition-colors hover:border-side-muted/40 hover:text-side-ink"
-        >
-          <Store className="h-4 w-4" />
+      <div className="mt-4 flex flex-col gap-2">
+        <Link to="/shop" className="flex items-center gap-3 rounded-2xl bg-tint-mint px-4 py-3 text-[13.5px] font-semibold text-nav-active-ink transition-colors hover:brightness-[0.98]">
+          <Store className="h-[18px] w-[18px]" />
           <span className="flex-1">Open the storefront</span>
           <span aria-hidden>↗</span>
         </Link>
-        <div className="flex items-center gap-2.5 rounded-xl px-2 py-2">
-          <Avatar name={BRAND.owner.fullName} size={32} />
+        <div className="flex items-center gap-3 rounded-2xl px-2 py-2">
+          <Avatar name={BRAND.owner.fullName} size={36} />
           <div className="min-w-0 leading-tight">
-            <div className="truncate text-[13px] font-medium text-side-ink">{BRAND.owner.fullName}</div>
-            <div className="text-[11.5px] text-side-muted">Owner · all access</div>
+            <div className="truncate text-[14px] font-bold text-nav-ink">{BRAND.owner.fullName}</div>
+            <div className="text-[12px] font-medium text-nav-muted">Owner</div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Desktop: a dark icon rail with short labels, like the owner's reference dashboard. */
+function Rail() {
+  const groups = useNav();
+  const items = groups.flat();
+  return (
+    <div className="flex h-full flex-col items-center gap-2 py-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
+      <Link to="/admin" aria-label="Today" className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-tint-lemon">
+        <LogoMark size={30} className="text-ink" ink="var(--tint-lemon)" />
+      </Link>
+      <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto no-scrollbar" aria-label="Console">
+        {items.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            title={item.label}
+            className={({ isActive }) =>
+              cn(
+                "relative flex w-[76px] flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10.5px] font-semibold leading-tight transition-colors",
+                isActive ? "bg-rail-active text-rail-active-ink" : "text-rail-muted hover:bg-white/10 hover:text-rail-ink",
+              )
+            }
+          >
+            <item.Icon className="h-[20px] w-[20px]" strokeWidth={2.1} />
+            <span className="max-w-full truncate">{item.label}</span>
+            {!!item.count && item.alert && <span className="absolute right-3 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-bad px-1 text-[10px] font-bold text-white">{item.count}</span>}
+          </NavLink>
+        ))}
+      </nav>
+      <Link to="/shop" title="Open the storefront" className="flex w-[76px] flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10.5px] font-semibold text-rail-muted hover:bg-white/10 hover:text-rail-ink">
+        <Store className="h-[20px] w-[20px]" strokeWidth={2.1} />
+        Store
+      </Link>
+      <div className="mt-1" title={BRAND.owner.fullName}>
+        <Avatar name={BRAND.owner.fullName} size={40} />
       </div>
     </div>
   );
@@ -274,7 +309,7 @@ function Notifications() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={`Notifications, ${unread} unread`}
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-[10px] text-ink-2 hover:bg-surface-3 hover:text-ink"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-2 hover:bg-surface-3 hover:text-ink"
       >
         <Bell className="h-[18px] w-[18px]" />
         {unread > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-bad ring-2 ring-surface" />}
@@ -325,7 +360,7 @@ function NewMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-9 items-center gap-1.5 rounded-[10px] bg-primary px-3 text-[13.5px] font-medium text-primary-ink shadow-card hover:bg-primary-hover"
+        className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-[13.5px] font-bold text-primary-ink hover:bg-primary-hover"
       >
         <Plus className="h-4 w-4" />
         <span className="hidden sm:inline">New</span>
@@ -383,14 +418,15 @@ export default function AdminLayout() {
   }, [loc.pathname]);
 
   return (
-    <div className="flex min-h-full">
-      <aside className="sticky top-0 hidden h-[100dvh] w-[248px] shrink-0 lg:block">
-        <Sidebar />
+    <div className="flex min-h-full bg-bg lg:bg-rail">
+      <aside className="sticky top-0 hidden h-[100dvh] w-[92px] shrink-0 lg:block">
+        <Rail />
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col lg:py-3 lg:pr-3">
+        <div className="flex min-h-full flex-1 flex-col bg-bg lg:overflow-clip lg:rounded-[28px]">
         <header
-          className="sticky z-30 flex h-14 items-center gap-2 border-b border-line bg-[color-mix(in_srgb,var(--bg)_86%,transparent)] px-4 backdrop-blur-md sm:px-6"
+          className="sticky z-30 flex h-16 items-center gap-2 bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] px-4 backdrop-blur-md sm:px-6 lg:top-0 lg:rounded-t-[28px] lg:px-8"
           style={{ top: "env(safe-area-inset-top, 0px)" }}
         >
           <div className="lg:hidden">
@@ -401,20 +437,20 @@ export default function AdminLayout() {
           <button
             type="button"
             onClick={() => setCmd(true)}
-            className="ml-auto hidden h-9 w-full max-w-[420px] items-center gap-2 rounded-[10px] border border-line bg-surface px-3 text-left text-[13.5px] text-ink-muted shadow-card hover:border-line-strong sm:flex lg:ml-0"
+            className="ml-auto hidden h-10 w-full max-w-[420px] items-center gap-2 rounded-full border border-line bg-surface px-4 text-left text-[13.5px] font-medium text-ink-muted hover:border-line-strong sm:flex lg:ml-0"
           >
             <Search className="h-4 w-4" />
-            <span className="flex-1">Search clients, orders, repairs, products</span>
+            <span className="flex-1">Search anything</span>
             <Kbd>⌘K</Kbd>
           </button>
           <div className="ml-auto flex items-center gap-1">
             <Badge tone="violet" className="mr-1 hidden xl:inline-flex">
               Prototype · sample data
             </Badge>
-            <button type="button" aria-label="Search" onClick={() => setCmd(true)} className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] text-ink-2 hover:bg-surface-3 sm:hidden">
+            <button type="button" aria-label="Search" onClick={() => setCmd(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-2 hover:bg-surface-3 sm:hidden">
               <Search className="h-[18px] w-[18px]" />
             </button>
-            <button type="button" aria-label="Toggle theme" onClick={cycle} className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] text-ink-2 hover:bg-surface-3 hover:text-ink">
+            <button type="button" aria-label="Toggle theme" onClick={cycle} className="inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-2 hover:bg-surface-3 hover:text-ink">
               {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
             </button>
             <Notifications />
@@ -425,6 +461,7 @@ export default function AdminLayout() {
         <main className="min-w-0 flex-1 pb-24 lg:pb-10">
           <Outlet />
         </main>
+        </div>
       </div>
 
       {/* mobile tab bar */}
@@ -451,7 +488,7 @@ export default function AdminLayout() {
           <button aria-label="Close menu" className="absolute inset-0 bg-black/40" onClick={() => setMore(false)} />
           <div className="absolute inset-y-0 left-0 w-[86%] max-w-[320px] animate-slide-in">
             <Sidebar onNavigate={() => setMore(false)} />
-            <button aria-label="Close" onClick={() => setMore(false)} className="absolute right-3 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-side-muted hover:text-side-ink" style={{ marginTop: "env(safe-area-inset-top, 0px)" }}>
+            <button aria-label="Close" onClick={() => setMore(false)} className="absolute right-3 top-4 flex h-10 w-10 items-center justify-center rounded-full text-nav-muted hover:bg-nav-hover hover:text-nav-ink" style={{ marginTop: "env(safe-area-inset-top, 0px)" }}>
               <X className="h-5 w-5" />
             </button>
           </div>

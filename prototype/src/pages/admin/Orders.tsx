@@ -143,17 +143,13 @@ export default function OrdersPage() {
                     setDrag(null);
                     setOver(null);
                   }}
-                  className={cn("flex w-[272px] shrink-0 flex-col rounded-2xl border bg-surface-2 transition-colors", over === st.id ? "border-primary bg-primary-soft/40" : "border-line")}
+                  className={cn("flex w-[272px] shrink-0 flex-col rounded-[22px] transition-colors", over === st.id ? "bg-primary-soft" : "bg-surface-3/70")}
                 >
-                  <div className="px-3 pb-2 pt-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13.5px] font-semibold text-ink">{st.label}</span>
-                      <span className="rounded-full bg-surface px-2 py-0.5 text-[12px] font-semibold text-ink-2 ring-1 ring-line tnum">{list.length}</span>
-                    </div>
-                    <div className="mt-0.5 flex justify-between text-[12px] text-ink-muted">
-                      <span>{st.hint}</span>
-                      <span className="tnum">{value ? money(value) : ""}</span>
-                    </div>
+                  <div className="flex items-center justify-between px-4 pb-2 pt-4">
+                    <span className="text-[15px] font-extrabold text-ink">{st.label}</span>
+                    <span className="rounded-full bg-surface px-2.5 py-0.5 text-[12.5px] font-bold text-ink-2 tnum" title={value ? money(value) : undefined}>
+                      {list.length}
+                    </span>
                   </div>
                   <div className="flex min-h-[120px] flex-col gap-2 px-2 pb-2">
                     {list.map((o) => (
@@ -248,7 +244,7 @@ function OrderCard({ o, onOpen, onDragStart }: { o: Order; onOpen: () => void; o
       }}
       onClick={onOpen}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen())}
-      className="group w-full cursor-grab rounded-xl border border-line bg-surface p-3 text-left shadow-card transition-all hover:-translate-y-px hover:border-line-strong active:cursor-grabbing"
+      className="group w-full cursor-grab rounded-2xl bg-surface p-3.5 text-left shadow-card transition-all hover:-translate-y-px active:cursor-grabbing"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5">

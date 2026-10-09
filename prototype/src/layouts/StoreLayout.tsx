@@ -13,7 +13,7 @@ import { ProductArt } from "@/components/art/ProductArt";
 
 const NAV = [
   { to: "/shop/catalog", label: "Shop" },
-  { to: "/shop/requirements", label: "Requirements list" },
+  { to: "/shop/requirements", label: "My list" },
   { to: "/shop/repair", label: "Repairs" },
   { to: "/shop/track", label: "Track" },
 ];
@@ -47,32 +47,33 @@ export default function StoreLayout() {
       </div>
 
       {/* header */}
-      <header className="sticky z-30 border-b border-line bg-[color-mix(in_srgb,var(--enamel)_88%,transparent)] backdrop-blur-md" style={{ top: "env(safe-area-inset-top, 0px)" }}>
+      <header className="sticky z-30 bg-[color-mix(in_srgb,var(--enamel)_90%,transparent)] backdrop-blur-md" style={{ top: "env(safe-area-inset-top, 0px)" }}>
         <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-6 px-4 sm:px-6">
           <Link to="/shop" className="shrink-0">
-            <Logo sub="Dental supply" />
+            <Logo />
           </Link>
           <nav className="hidden items-center gap-1 md:flex" aria-label="Store">
             {NAV.map((n) => (
-              <NavLink key={n.to} to={n.to} className={({ isActive }) => cn("rounded-lg px-3 py-2 text-[14px] font-medium transition-colors", isActive ? "text-primary" : "text-ink-2 hover:text-ink")}>
+              <NavLink key={n.to} to={n.to} className={({ isActive }) => cn("rounded-full px-3.5 py-2 text-[14px] font-semibold transition-colors", isActive ? "bg-surface-3 text-ink" : "text-ink-2 hover:text-ink")}>
                 {n.label}
               </NavLink>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-1.5">
-            <Link to="/shop/catalog" aria-label="Search the shop" className="hidden h-10 w-10 items-center justify-center rounded-xl text-ink-2 hover:bg-surface-3 sm:flex">
+          <div className="ml-auto flex items-center gap-1">
+            <Link to="/shop/catalog" aria-label="Search the shop" className="hidden h-10 w-10 items-center justify-center rounded-full text-ink-2 hover:bg-surface-3 sm:flex">
               <Search className="h-[19px] w-[19px]" />
             </Link>
-            <Link to="/shop/account" className="hidden items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-surface-3 sm:flex">
-              <Avatar name={me.name} size={28} />
-              <span className="text-[13.5px] font-medium text-ink">{me.name.split(" ")[0]}</span>
+            <Link to="/shop/account" aria-label={`Account: ${me.name}`} className="hidden h-10 w-10 items-center justify-center rounded-full hover:bg-surface-3 sm:flex">
+              <Avatar name={me.name} size={30} />
             </Link>
-            <button type="button" onClick={() => setCartOpen(true)} className="relative flex h-10 items-center gap-2 rounded-xl bg-primary px-3.5 text-[13.5px] font-medium text-primary-ink hover:bg-primary-hover">
-              <ShoppingBag className="h-[18px] w-[18px]" />
-              <span className="hidden sm:inline">Bag</span>
-              {count > 0 && <span className="rounded-full bg-primary-ink/20 px-1.5 text-[12px] tnum">{count}</span>}
+            <button type="button" onClick={() => setCartOpen(true)} aria-label={`Bag, ${count} items`} className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-surface-3">
+              <ShoppingBag className="h-[20px] w-[20px]" />
+              {count > 0 && <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-ink px-1 text-[10.5px] font-bold text-surface tnum">{count}</span>}
             </button>
-            <button type="button" aria-label="Menu" onClick={() => setMenu(true)} className="flex h-10 w-10 items-center justify-center rounded-xl text-ink-2 hover:bg-surface-3 md:hidden">
+            <Link to="/shop/requirements" className="ml-1 hidden h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-[13.5px] font-bold text-primary-ink hover:bg-primary-hover sm:inline-flex">
+              <Plus className="h-4 w-4" /> Build my list
+            </Link>
+            <button type="button" aria-label="Menu" onClick={() => setMenu(true)} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-2 hover:bg-surface-3 md:hidden">
               <Menu className="h-5 w-5" />
             </button>
           </div>

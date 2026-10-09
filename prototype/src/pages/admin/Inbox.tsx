@@ -46,7 +46,7 @@ export default function InboxPage() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-56px-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-56px)] min-h-[520px] lg:h-[calc(100dvh-56px-env(safe-area-inset-top,0px))]">
+    <div className="flex h-[calc(100dvh-64px-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-56px)] min-h-[520px] lg:h-[calc(100dvh-64px-24px-env(safe-area-inset-top,0px))]">
       {/* list */}
       <div className={cn("flex w-full shrink-0 flex-col border-r border-line bg-surface lg:w-[340px]", selected && "hidden lg:flex")}>
         <div className="border-b border-line px-4 pb-3 pt-4">
