@@ -1,0 +1,276 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Layout concept: a calm operations console (deep-teal rail, enamel-white work surface)
+  paired with an editorial storefront (serif display, instrument line drawings).
+  Neutrals carry a slight teal bias; status colors are reserved for state.
+*/
+:root {
+  color-scheme: light;
+  --bg: #f1f4f3;
+  --surface: #ffffff;
+  --surface-2: #f7f9f8;
+  --surface-3: #ecf1ef;
+  --border: #e0e7e4;
+  --border-strong: #c9d3cf;
+  --ink: #11201d;
+  --ink-2: #44534e;
+  --muted: #6f7d79;
+  --enamel: #fbfcfb;
+
+  --primary: #0b6b61;
+  --primary-hover: #085a51;
+  --primary-ink: #ffffff;
+  --primary-soft: #e0f1ed;
+  --primary-soft-ink: #08564e;
+
+  --good: #137a43;
+  --good-soft: #e2f3e9;
+  --warn: #8f5d00;
+  --warn-soft: #fbefd2;
+  --bad: #b5302a;
+  --bad-soft: #fbe5e2;
+  --info: #1f5db3;
+  --info-soft: #e3edfa;
+  --violet: #5847b5;
+  --violet-soft: #ebe8fa;
+
+  --side: #0d2523;
+  --side-2: #143230;
+  --side-ink: #e4efec;
+  --side-muted: #8fb0aa;
+  --side-active: #7fdcca;
+
+  /* charts: validated categorical order (teal, orange, blue, yellow, magenta, violet) */
+  --chart-1: #0b8c7d;
+  --chart-2: #eb6834;
+  --chart-3: #2a78d6;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #4a3aa7;
+  --chart-muted: #b9c4c0;
+  --chart-grid: #e7ecea;
+  --chart-axis: #c9d3cf;
+  --chart-wash: rgba(11, 140, 125, 0.1);
+  /* receivables aging: one-hue ordinal ramp (1-30 -> 90+) */
+  --age-1: #e59a74;
+  --age-2: #d9663c;
+  --age-3: #b84a24;
+  --age-4: #8a3415;
+
+  --tile-1: #e6f0f7;
+  --tile-2: #edf1ef;
+  --tile-3: #f3efe6;
+  --tile-4: #f7ecee;
+  --tile-5: #eef0f8;
+  --tile-6: #f5f2e4;
+  --tile-7: #e8f3ed;
+  --tile-8: #e1f1ed;
+  --shadow: 0 1px 2px rgba(17, 32, 29, 0.05), 0 1px 3px rgba(17, 32, 29, 0.04);
+  --shadow-lg: 0 18px 40px -12px rgba(17, 32, 29, 0.22), 0 2px 6px rgba(17, 32, 29, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b100f;
+    --surface: #121918;
+    --surface-2: #161e1d;
+    --surface-3: #1c2725;
+    --border: #22302e;
+    --border-strong: #2f403d;
+    --ink: #e5eeeb;
+    --ink-2: #adbcb7;
+    --muted: #7e8e89;
+    --enamel: #0f1514;
+    --primary: #36b4a3;
+    --primary-hover: #4cc6b5;
+    --primary-ink: #04201c;
+    --primary-soft: #12322e;
+    --primary-soft-ink: #86dccf;
+    --good: #52c482;
+    --good-soft: #10301f;
+    --warn: #e2ab3d;
+    --warn-soft: #33270c;
+    --bad: #f2786e;
+    --bad-soft: #3a1714;
+    --info: #71a9ee;
+    --info-soft: #13263f;
+    --violet: #a497f0;
+    --violet-soft: #221d40;
+    --side: #08100f;
+    --side-2: #11201e;
+    --side-ink: #dbe8e5;
+    --side-muted: #7c9a94;
+    --side-active: #7fdcca;
+    --chart-1: #2aa496;
+    --chart-2: #d95926;
+    --chart-3: #3987e5;
+    --chart-4: #c98500;
+    --chart-5: #d55181;
+    --chart-6: #9085e9;
+    --chart-muted: #44524f;
+    --chart-grid: #1f2b29;
+    --chart-axis: #2f403d;
+    --chart-wash: rgba(42, 164, 150, 0.12);
+    --age-1: #8c4f33;
+    --age-2: #b25c36;
+    --age-3: #d6703f;
+    --age-4: #ee9a72;
+    --tile-1: #16232b;
+    --tile-2: #19211f;
+    --tile-3: #24211a;
+    --tile-4: #271c1f;
+    --tile-5: #1b1e2a;
+    --tile-6: #25231a;
+    --tile-7: #17241e;
+    --tile-8: #13302b;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 18px 40px -12px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b100f;
+  --surface: #121918;
+  --surface-2: #161e1d;
+  --surface-3: #1c2725;
+  --border: #22302e;
+  --border-strong: #2f403d;
+  --ink: #e5eeeb;
+  --ink-2: #adbcb7;
+  --muted: #7e8e89;
+  --enamel: #0f1514;
+  --primary: #36b4a3;
+  --primary-hover: #4cc6b5;
+  --primary-ink: #04201c;
+  --primary-soft: #12322e;
+  --primary-soft-ink: #86dccf;
+  --good: #52c482;
+  --good-soft: #10301f;
+  --warn: #e2ab3d;
+  --warn-soft: #33270c;
+  --bad: #f2786e;
+  --bad-soft: #3a1714;
+  --info: #71a9ee;
+  --info-soft: #13263f;
+  --violet: #a497f0;
+  --violet-soft: #221d40;
+  --side: #08100f;
+  --side-2: #11201e;
+  --side-ink: #dbe8e5;
+  --side-muted: #7c9a94;
+  --side-active: #7fdcca;
+  --chart-1: #2aa496;
+  --chart-2: #d95926;
+  --chart-3: #3987e5;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #9085e9;
+  --chart-muted: #44524f;
+  --chart-grid: #1f2b29;
+  --chart-axis: #2f403d;
+  --chart-wash: rgba(42, 164, 150, 0.12);
+  --age-1: #8c4f33;
+  --age-2: #b25c36;
+  --age-3: #d6703f;
+  --age-4: #ee9a72;
+  --tile-1: #16232b;
+  --tile-2: #19211f;
+  --tile-3: #24211a;
+  --tile-4: #271c1f;
+  --tile-5: #1b1e2a;
+  --tile-6: #25231a;
+  --tile-7: #17241e;
+  --tile-8: #13302b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 18px 40px -12px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--primary-soft);
+  color: var(--ink);
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.eyebrow {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* subtle dotted ground used on the storefront hero */
+.dot-ground {
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
