@@ -42,12 +42,15 @@ export function ProductCard({ p, onOpen }: { p: Product; onOpen?: () => void }) 
         <button type="button" onClick={onOpen} className="block w-full" aria-label={`View ${p.name}`}>
           <ProductArt kind={p.art} category={p.category} fluid tile={false} className="aspect-square w-full transition-transform duration-300 group-hover:scale-[1.04]" />
         </button>
-        {live.stock <= 3 ? (
-          <span className="absolute left-3 top-3 rounded-full bg-[#f2683c] px-2.5 py-1 text-[11.5px] font-bold text-white">Only {live.stock} left</span>
-        ) : (
-          p.serviceable && <span className="absolute left-3 top-3 rounded-full bg-surface px-2.5 py-1 text-[11.5px] font-bold text-ink">Repairs included</span>
-        )}
-        <span className="absolute right-3 top-3 rounded-full bg-surface px-2.5 py-1 text-[12.5px] font-extrabold text-ink tnum">{money(live.price)}</span>
+        {/* badge and price share one row and wrap on narrow cards instead of overlapping */}
+        <div className="pointer-events-none absolute inset-x-3 top-3 flex flex-wrap-reverse items-start justify-between gap-1.5">
+          {live.stock <= 3 ? (
+            <span className="rounded-full bg-[#f2683c] px-2.5 py-1 text-[11.5px] font-bold text-white">Only {live.stock} left</span>
+          ) : (
+            p.serviceable && <span className="rounded-full bg-surface px-2.5 py-1 text-[11.5px] font-bold text-ink">Repairs included</span>
+          )}
+          <span className="ml-auto rounded-full bg-surface px-2.5 py-1 text-[12.5px] font-extrabold text-ink tnum">{money(live.price)}</span>
+        </div>
         <button
           type="button"
           onClick={() => add(p.id)}

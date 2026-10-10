@@ -8,7 +8,7 @@ A UI/UX prototype for a one-person business that supplies dental students with i
 
 Everything runs on sample data in the browser. Actions work across both sides: place an order or send a chat message in the storefront and it shows up in the console.
 
-The research behind the design is in [`docs/RESEARCH.md`](docs/RESEARCH.md).
+The research behind the design is in [`docs/RESEARCH.md`](docs/RESEARCH.md). A short visual proposal to share with the owner is in [`docs/Cusp-proposal.pdf`](docs/Cusp-proposal.pdf).
 
 ## Run it
 
