@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowRight, Columns3, List, MessageSquareText, Plus, Send, Sparkles, Truck, Users } from "lucide-react";
+import { ArrowRight, Columns3, List, Plus, Send, Truck, Users } from "lucide-react";
 import { NOW } from "@/config/brand";
 import { UNIVERSITIES, YEAR_LABEL, uni } from "@/data/catalog";
 import { orderCost, orderTotal } from "@/data/seed";
@@ -9,10 +9,10 @@ import { cn } from "@/lib/cn";
 import { addDays, ago, dateTime, dueLabel, money, pct, shortDate, shortName } from "@/lib/format";
 import { isDueToday, isLate, isOpen } from "@/lib/metrics";
 import { ORDER_STAGES, useClientMap, useStore } from "@/store/useStore";
-import { Avatar, Badge, Button, Card, Field, Input, PageHeader, SearchInput, Segmented, Select, Textarea } from "@/components/ui/primitives";
-import { Drawer, Modal } from "@/components/ui/overlays";
+import { Avatar, Badge, Button, Card, Input, PageHeader, SearchInput, Segmented, Select } from "@/components/ui/primitives";
+import { Drawer } from "@/components/ui/overlays";
 import { ChannelIcon, Mono, OrderStagePill, PaymentPill } from "@/components/ui/domain";
-import { ProductArt } from "@/components/art/ProductArt";
+import { NewDatePrompt, lateTitle } from "@/components/flows/Flows";
 
 type View = "board" | "list";
 type Quick = "open" | "today" | "late" | "unpaid" | "all";
@@ -23,14 +23,14 @@ export default function OrdersPage() {
   const setStage = useStore((s) => s.setOrderStage);
   const clients = useClientMap();
   const [view, setView] = useState<View>(() => (typeof window !== "undefined" && window.innerWidth < 768 ? "list" : "board"));
-  const [quick, setQuick] = useState<Quick>(params.get("view") === "today" ? "today" : "open");
+  const [quick, setQuick] = useState<Quick>(() => (["today", "late", "unpaid"].includes(params.get("view") ?? "") ? (params.get("view") as Quick) : "open"));
   const [q, setQ] = useState("");
   const [uniF, setUniF] = useState("all");
   const [drag, setDrag] = useState<string | null>(null);
   const [over, setOver] = useState<OrderStage | null>(null);
   const stageFilter = params.get("stage") as OrderStage | null;
   const openId = params.get("o");
-  const newOpen = params.get("new") === "1";
+  const openFlow = useStore((s) => s.openFlow);
 
   const setParam = (k: string, v: string | null) => {
     const p = new URLSearchParams(params);
@@ -78,7 +78,7 @@ export default function OrdersPage() {
                 { id: "list", label: <><List className="h-3.5 w-3.5" /> List</> },
               ]}
             />
-            <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setParam("new", "1")}>
+            <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => openFlow({ kind: "order" })}>
               New order
             </Button>
           </>
@@ -112,6 +112,14 @@ export default function OrdersPage() {
           </Select>
         </div>
       </div>
+      {quick === "late" && counts.late > 0 && (
+        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-bad-soft px-4 py-3 text-[13.5px] font-medium text-ink-2">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-bad" />
+          <span>
+            <b className="font-bold text-ink">{counts.late} {counts.late === 1 ? "order is" : "orders are"} past the promised date.</b> Open one to send the client a new date in one tap.
+          </span>
+        </div>
+      )}
       {stageFilter && (
         <div className="mt-3 flex items-center gap-2 text-[13px] text-ink-2">
           Showing stage <OrderStagePill stage={stageFilter} />
@@ -221,7 +229,6 @@ export default function OrdersPage() {
       )}
 
       <OrderDrawer order={selected} onClose={() => setParam("o", null)} />
-      <NewOrderModal open={newOpen} onClose={() => setParam("new", null)} onCreated={(id) => setParam("o", id)} />
     </div>
   );
 }
@@ -252,7 +259,7 @@ function OrderCard({ o, onOpen, onDragStart }: { o: Order; onOpen: () => void; o
           <ChannelIcon channel={o.channel} />
         </span>
         {o.stage !== "delivered" && !["new", "quoted"].includes(o.stage) && (
-          <span className={cn("text-[11.5px] font-medium", late ? "text-bad" : today ? "text-warn" : "text-ink-muted")}>{dueLabel(o.promisedAt)}</span>
+          <span className={cn("text-[11.5px] font-semibold", late ? "rounded-full bg-bad-soft px-2 py-0.5 text-bad" : today ? "text-warn" : "text-ink-muted")}>{dueLabel(o.promisedAt)}</span>
         )}
         {["new", "quoted"].includes(o.stage) && <span className="text-[11.5px] text-ink-muted">{ago(o.createdAt)}</span>}
       </div>
@@ -288,6 +295,7 @@ function OrderDrawer({ order, onClose }: { order?: Order; onClose: () => void })
   const clients = useClientMap();
   const setStage = useStore((s) => s.setOrderStage);
   const recordPayment = useStore((s) => s.recordPayment);
+  const delayOrder = useStore((s) => s.delayOrder);
   const toast = useStore((s) => s.toast);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("InstaPay");
@@ -348,6 +356,8 @@ function OrderDrawer({ order, onClose }: { order?: Order; onClose: () => void })
       </div>
 
       <div className="grid grid-cols-1 gap-5 px-5 py-5">
+        {isLate(order) && <NewDatePrompt title={lateTitle("order", order.promisedAt)} who={c?.name.split(" ")[0] ?? "The client"} onSend={(d) => delayOrder(order.id, d)} />}
+
         {/* client */}
         {c && (
           <Link to={`/admin/clients/${c.id}`} className="flex items-center gap-3 rounded-xl border border-line p-3 hover:border-line-strong">
@@ -490,117 +500,5 @@ export function Timeline({ events }: { events: Order["timeline"] }) {
         </li>
       ))}
     </ol>
-  );
-}
-
-/* --------------------------------------------------------------- new order */
-
-const SAMPLE = "Hi! I need 2 K-files 15-40, the rubber dam kit and one set of typodont teeth please. Delivery to Ain Shams Saturday?";
-
-function NewOrderModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
-  const products = useStore((s) => s.products);
-  const clients = useStore((s) => s.clients);
-  const create = useStore((s) => s.createOrder);
-  const [msg, setMsg] = useState(SAMPLE);
-  const [clientId, setClientId] = useState("c002");
-  const detected = useMemo(() => {
-    const t = msg.toLowerCase();
-    const rules: [RegExp, string][] = [
-      [/k-?files?/, "p33"],
-      [/rubber dam/, "p36"],
-      [/typodont teeth|replacement teeth/, "p23"],
-      [/typodont(?! teeth)/, "p22"],
-      [/micromotor|strong/, "p04"],
-      [/diamond bur|burs?/, "p18"],
-      [/composite kit|composite/, "p26"],
-      [/alginate/, "p28"],
-      [/loupes?/, "p38"],
-      [/coat/, "p39"],
-      [/gutta|gp/, "p34"],
-      [/paper points/, "p35"],
-      [/handpiece|turbine/, "p01"],
-    ];
-    const out: { productId: string; qty: number }[] = [];
-    for (const [re, id] of rules) {
-      const m = t.match(re);
-      if (!m || out.some((o) => o.productId === id)) continue;
-      const before = t.slice(Math.max(0, (m.index ?? 0) - 8), m.index);
-      const qm = before.match(/(\d+)\s*(x|×)?\s*$/) ?? before.match(/(\d+)\s+\w*\s*$/);
-      out.push({ productId: id, qty: qm ? Math.min(10, Number(qm[1])) : 1 });
-    }
-    return out;
-  }, [msg]);
-  const total = detected.reduce((s, d) => s + (products.find((p) => p.id === d.productId)?.price ?? 0) * d.qty, 0);
-  const c = clients.find((x) => x.id === clientId);
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="New order from a message"
-      width={620}
-      footer={
-        <>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            variant="primary"
-            disabled={!detected.length}
-            onClick={() => {
-              const id = create({ clientId, items: detected, channel: "whatsapp", promisedAt: addDays(NOW, 2) });
-              onClose();
-              setTimeout(() => onCreated(id), 0);
-            }}
-          >
-            Create and send quote
-          </Button>
-        </>
-      }
-    >
-      <div className="grid grid-cols-1 gap-4 p-5">
-        <div className="flex gap-2.5 rounded-xl bg-primary-soft px-3 py-2.5 text-[13px] text-ink-2">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          Paste what the student wrote. Products and quantities are picked out for you; check them and send the quote.
-        </div>
-        <Field label="Client">
-          <Select value={clientId} onChange={(e) => setClientId(e.target.value)}>
-            {clients.slice(0, 40).map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.name} · {uni(x.universityId).short} · {YEAR_LABEL[x.year]}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Their message">
-          <div className="relative">
-            <MessageSquareText className="absolute left-3 top-2.5 h-4 w-4 text-ink-muted" />
-            <Textarea id="order-message" rows={3} className="pl-9" value={msg} onChange={(e) => setMsg(e.target.value)} />
-          </div>
-        </Field>
-        <div>
-          <div className="eyebrow mb-2">Detected items</div>
-          <ul className="overflow-hidden rounded-xl border border-line">
-            {detected.map((d) => {
-              const p = products.find((x) => x.id === d.productId)!;
-              return (
-                <li key={d.productId} className="flex items-center gap-3 border-b border-line px-3 py-2 last:border-0">
-                  <ProductArt kind={p.art} category={p.category} size={34} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] text-ink">{p.name}</span>
-                    <span className="text-[12px] text-ink-muted">{p.stock} in stock</span>
-                  </span>
-                  <span className="text-[13px] text-ink-2 tnum">
-                    {d.qty} × {money(p.price)}
-                  </span>
-                </li>
-              );
-            })}
-            {!detected.length && <li className="px-3 py-4 text-center text-[13px] text-ink-muted">No products recognised yet</li>}
-          </ul>
-          <div className="mt-2 flex justify-between text-[13.5px]">
-            <span className="text-ink-muted">Delivery to {c ? uni(c.universityId).campus : "campus"}</span>
-            <span className="font-semibold text-ink tnum">{money(total)}</span>
-          </div>
-        </div>
-      </div>
-    </Modal>
   );
 }

@@ -1,23 +1,25 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowRight, Copy, ExternalLink, Phone, Plus, ShieldCheck, Timer, Wrench } from "lucide-react";
+import { ArrowRight, Copy, ExternalLink, Phone, Plus, ShieldCheck, Timer } from "lucide-react";
 import { BRAND, NOW } from "@/config/brand";
-import { PARTNERS, PRODUCTS, YEAR_LABEL, partner, uni } from "@/data/catalog";
+import { PARTNERS, YEAR_LABEL, partner, uni } from "@/data/catalog";
 import type { Repair } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { ago, dueLabel, duration, money, num1, pct, shortName } from "@/lib/format";
 import { isActiveRepair, repairLate, repairStats } from "@/lib/metrics";
 import { REPAIR_STAGES, useClientMap, useStore } from "@/store/useStore";
-import { Avatar, Badge, Button, Card, Field, Input, Meter, PageHeader, Select, Stat, Textarea, Toggle } from "@/components/ui/primitives";
-import { Drawer, Modal } from "@/components/ui/overlays";
+import { Avatar, Badge, Button, Card, Field, Input, Meter, PageHeader, Stat } from "@/components/ui/primitives";
+import { Drawer } from "@/components/ui/overlays";
 import { Mono, RepairStagePill } from "@/components/ui/domain";
 import { ProductArt } from "@/components/art/ProductArt";
 import { Timeline } from "./Orders";
+import { NewDatePrompt, lateTitle } from "@/components/flows/Flows";
 
 export default function RepairsPage() {
   const [params, setParams] = useSearchParams();
   const repairs = useStore((s) => s.repairs);
   const setStage = useStore((s) => s.setRepairStage);
+  const openFlow = useStore((s) => s.openFlow);
   const [drag, setDrag] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const stats = useMemo(() => repairStats(repairs), [repairs]);
@@ -37,7 +39,7 @@ export default function RepairsPage() {
         title="Repairs"
         sub="The part of the service students can't get anywhere else. Every device is tracked from pickup to hand-back."
         actions={
-          <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setParam("new", "1")}>
+          <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => openFlow({ kind: "repair" })}>
             New repair
           </Button>
         }
@@ -126,7 +128,6 @@ export default function RepairsPage() {
       </div>
 
       <RepairDrawer repair={selected} onClose={() => setParam("r", null)} />
-      <NewRepairModal open={params.get("new") === "1"} onClose={() => setParam("new", null)} onCreated={(id) => setParam("r", id)} />
     </div>
   );
 }
@@ -192,6 +193,7 @@ function RepairDrawer({ repair, onClose }: { repair?: Repair; onClose: () => voi
   const setStage = useStore((s) => s.setRepairStage);
   const sendEstimate = useStore((s) => s.sendEstimate);
   const approve = useStore((s) => s.approveRepair);
+  const delayRepair = useStore((s) => s.delayRepair);
   const toast = useStore((s) => s.toast);
   const [cost, setCost] = useState("");
   const [markup, setMarkup] = useState(30);
@@ -236,6 +238,18 @@ function RepairDrawer({ repair, onClose }: { repair?: Repair; onClose: () => voi
         </ol>
       </div>
       <div className="grid grid-cols-1 gap-5 px-5 py-5">
+        {repairLate(repair) && (
+          <NewDatePrompt
+            title={lateTitle("repair", repair.promisedAt)}
+            who={c?.name.split(" ")[0] ?? "The client"}
+            onSend={(d) => delayRepair(repair.id, d)}
+            extra={
+              <a href={`tel:${p.phone.replace(/\s/g, "")}`} onClick={() => toast(`Calling ${p.short} on ${p.phone}`, "info")} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-[13px] font-semibold text-ink hover:border-line-strong">
+                <Phone className="h-3.5 w-3.5" /> Call {p.short}
+              </a>
+            }
+          />
+        )}
         <div className="flex gap-4">
           <ProductArt kind={repair.art} category="Handpieces & motors" size={72} />
           <div className="min-w-0 flex-1">
@@ -364,69 +378,5 @@ function RepairDrawer({ repair, onClose }: { repair?: Repair; onClose: () => voi
         </div>
       </div>
     </Drawer>
-  );
-}
-
-function NewRepairModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
-  const clients = useStore((s) => s.clients);
-  const submit = useStore((s) => s.submitRepair);
-  const [clientId, setClientId] = useState("c002");
-  const [productId, setProductId] = useState("p01");
-  const [issue, setIssue] = useState("");
-  const [loaner, setLoaner] = useState(true);
-  const devices = PRODUCTS.filter((p) => p.serviceable);
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="New repair"
-      footer={
-        <>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            variant="primary"
-            icon={<Wrench className="h-4 w-4" />}
-            onClick={() => {
-              const id = submit({ clientId, productId, issue: issue || "To be diagnosed", handover: "picked up on campus", loaner, photos: 0 });
-              onClose();
-              setTimeout(() => onCreated(id), 0);
-            }}
-          >
-            Create and send tracking link
-          </Button>
-        </>
-      }
-    >
-      <div className="grid grid-cols-1 gap-4 p-5">
-        <Field label="Client">
-          <Select value={clientId} onChange={(e) => setClientId(e.target.value)}>
-            {clients.slice(0, 40).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} · {uni(c.universityId).short}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Device">
-          <Select value={productId} onChange={(e) => setProductId(e.target.value)}>
-            {devices.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.brand} · {d.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="What's wrong">
-          <Textarea id="repair-issue" rows={2} placeholder="e.g. bur slips, noisy turbine" value={issue} onChange={(e) => setIssue(e.target.value)} />
-        </Field>
-        <label className="flex items-center justify-between gap-3 rounded-xl border border-line px-3.5 py-3">
-          <span>
-            <span className="block text-[13.5px] font-medium text-ink">Give a loaner</span>
-            <span className="text-[12.5px] text-ink-muted">3 of 4 loaner turbines are out right now</span>
-          </span>
-          <Toggle checked={loaner} onChange={setLoaner} label="Give a loaner" />
-        </label>
-      </div>
-    </Modal>
   );
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Circle, MessageCircle, Phone, Send, ShoppingBag, Wrench } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, CheckCircle2, Circle, CreditCard, MessageCircle, Send, ShoppingBag, Wrench } from "lucide-react";
 import { REQUIREMENTS, YEAR_LABEL, product, uni } from "@/data/catalog";
 import { orderTotal } from "@/data/seed";
 import { cn } from "@/lib/cn";
@@ -25,6 +25,9 @@ export default function ClientProfile() {
   const invoices = useStore((s) => s.invoices);
   const toast = useStore((s) => s.toast);
   const addOrder = useStore((s) => s.createOrder);
+  const openFlow = useStore((s) => s.openFlow);
+  const conv = useStore((s) => s.conversations.find((c) => c.clientId === id));
+  const nav = useNavigate();
   const [tab, setTab] = useState<Tab>("orders");
   const stats = useMemo(() => clientStats(orders, invoices).get(id ?? ""), [orders, invoices, id]);
 
@@ -49,7 +52,7 @@ export default function ClientProfile() {
           <Avatar name={client.name} size={60} />
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-ink">{client.name}</h1>
+              <h1 className="text-[26px] font-extrabold tracking-[-0.03em] text-ink">{client.name}</h1>
               {client.tags.map((t) => (
                 <Badge key={t} tone={t === "Late payer" ? "bad" : t === "VIP" ? "violet" : "info"}>
                   {t}
@@ -62,17 +65,20 @@ export default function ClientProfile() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button icon={<MessageCircle className="h-4 w-4" />} onClick={() => toast("Opening WhatsApp chat", "info")}>
+          <Button icon={<MessageCircle className="h-4 w-4" />} onClick={() => (conv ? nav(`/admin/inbox?c=${conv.id}`) : toast("Opening WhatsApp chat", "info"))}>
             Message
           </Button>
-          <Button icon={<Phone className="h-4 w-4" />} onClick={() => toast(`Calling ${client.phone}`, "info")}>
-            Call
+          <Button icon={<Wrench className="h-4 w-4" />} onClick={() => openFlow({ kind: "repair", clientId: client.id })}>
+            Repair
           </Button>
-          <Link to="/admin/orders?new=1">
-            <Button variant="primary" icon={<ShoppingBag className="h-4 w-4" />}>
-              New order
+          {!!stats?.balance && (
+            <Button icon={<CreditCard className="h-4 w-4" />} onClick={() => openFlow({ kind: "payment", clientId: client.id })}>
+              Payment
             </Button>
-          </Link>
+          )}
+          <Button variant="primary" icon={<ShoppingBag className="h-4 w-4" />} onClick={() => openFlow({ kind: "order", clientId: client.id, message: "" })}>
+            New order
+          </Button>
         </div>
       </div>
 

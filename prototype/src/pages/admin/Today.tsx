@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Boxes, CalendarClock, CircleDollarSign, Clock3, CreditCard, MessageCircle, PackageCheck, Truck, Wrench } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Boxes, Check, CalendarClock, CircleDollarSign, Clock3, CreditCard, MessageCircle, PackageCheck, Truck, Wrench } from "lucide-react";
 import { BRAND, NOW } from "@/config/brand";
 import { PARTNERS, product } from "@/data/catalog";
 import { orderTotal } from "@/data/seed";
@@ -120,6 +120,8 @@ interface Todo {
   sub: string;
   to: string;
   rank: number;
+  /** a one-tap fix, shown as a button next to the item */
+  action?: { label: string; run: () => void };
 }
 
 function useTodo(): Todo[] {
@@ -128,6 +130,8 @@ function useTodo(): Todo[] {
   const invoices = useStore((s) => s.invoices);
   const conversations = useStore((s) => s.conversations);
   const products = useStore((s) => s.products);
+  const recordPayment = useStore((s) => s.recordPayment);
+  const postToChat = useStore((s) => s.postToChat);
   const clients = useClientMap();
   return useMemo(() => {
     const out: Todo[] = [];
@@ -141,7 +145,7 @@ function useTodo(): Todo[] {
       out.push({ id: "inbox", tint: "rose", icon: <MessageCircle className="h-5 w-5" />, title: `Reply to ${waiting.length} people`, sub: `${firstName(who ?? "")} has waited ${duration(NOW.getTime() - w.since.getTime())}`, to: `/admin/inbox?c=${w.c.id}`, rank: 0 });
     }
     const late = orders.filter(isLate).filter((o) => !isDueToday(o));
-    if (late.length) out.push({ id: "late", tint: "rose", icon: <Clock3 className="h-5 w-5" />, title: `${late.length} ${late.length === 1 ? "order is" : "orders are"} late`, sub: `${firstName(clients.get(late[0].clientId)?.name ?? "")} · ${shortName(late[0].items[0]?.name ?? "")}`, to: `/admin/orders?o=${late[0].id}`, rank: 1 });
+    if (late.length) out.push({ id: "late", tint: "rose", icon: <Clock3 className="h-5 w-5" />, title: `${late.length} ${late.length === 1 ? "order is" : "orders are"} late`, sub: `${firstName(clients.get(late[0].clientId)?.name ?? "")} · ${shortName(late[0].items[0]?.name ?? "")}`, to: "/admin/orders?view=late", rank: 1 });
     const lateRep = repairs.filter(repairLate);
     if (lateRep.length) {
       const r = lateRep[0];
@@ -157,7 +161,27 @@ function useTodo(): Todo[] {
     const receipts = conversations.filter((c) => c.status === "open" && c.messages[c.messages.length - 1]?.attachment?.includes("instapay"));
     if (receipts.length) {
       const o = orders.find((x) => x.id === receipts[0].links?.[0]);
-      out.push({ id: "receipt", tint: "mint", icon: <CreditCard className="h-5 w-5" />, title: "Confirm a payment", sub: `${firstName(clients.get(receipts[0].clientId!)?.name ?? "")} sent an InstaPay screenshot${o ? ` · ${money(orderTotal(o))}` : ""}`, to: `/admin/inbox?c=${receipts[0].id}`, rank: 3 });
+      const who = firstName(clients.get(receipts[0].clientId!)?.name ?? "");
+      const left = o ? orderTotal(o) - o.paid : 0;
+      out.push({
+        id: "receipt",
+        tint: "mint",
+        icon: <CreditCard className="h-5 w-5" />,
+        title: "Confirm a payment",
+        sub: `${who} sent an InstaPay screenshot${o ? ` · ${money(left)}` : ""}`,
+        to: `/admin/inbox?c=${receipts[0].id}`,
+        rank: 0.5,
+        action:
+          o && left > 0
+            ? {
+                label: "Confirm",
+                run: () => {
+                  recordPayment(o.id, left, "InstaPay");
+                  postToChat(receipts[0].id, `Received, thank you ${who}! Payment confirmed.`);
+                },
+              }
+            : undefined,
+      });
     }
     const rc = receivables(invoices);
     if (rc.overdue > 0) out.push({ id: "overdue", tint: "peach", icon: <CircleDollarSign className="h-5 w-5" />, title: `${money(rc.overdue)} is overdue`, sub: "Reminders go out automatically", to: "/admin/invoices?f=overdue", rank: 5 });
@@ -165,7 +189,7 @@ function useTodo(): Todo[] {
     const low = lowStock(products, sold);
     if (low.length) out.push({ id: "stock", tint: "lemon", icon: <Boxes className="h-5 w-5" />, title: `Restock ${low.length} products`, sub: `${shortName(low[0].name)} first: ${low[0].stock} left`, to: "/admin/catalog?tab=stock", rank: 6 });
     return out.sort((a, b) => a.rank - b.rank);
-  }, [orders, repairs, invoices, conversations, products, clients]);
+  }, [orders, repairs, invoices, conversations, products, clients, recordPayment, postToChat]);
 }
 
 function TodoCard({ items, className }: { items: Todo[]; className?: string }) {
@@ -179,16 +203,21 @@ function TodoCard({ items, className }: { items: Todo[]; className?: string }) {
       </div>
       <ul>
         {shown.map((t) => (
-          <li key={t.id}>
-            <Link to={t.to} className="group flex items-center gap-3.5 rounded-2xl px-4 py-3 transition-colors hover:bg-surface-2">
+          <li key={t.id} className="group flex items-center gap-2 rounded-2xl pr-3 transition-colors hover:bg-surface-2">
+            <Link to={t.to} className="flex min-w-0 flex-1 items-center gap-3.5 py-3 pl-4">
               <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink", TINT[t.tint])}>{t.icon}</span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-bold leading-snug text-ink">{t.title}</span>
                 <span className="block truncate text-[13px] font-medium text-ink-muted">{t.sub}</span>
               </span>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-3 text-ink-2 transition-colors group-hover:bg-primary group-hover:text-primary-ink">
-                <ArrowRight className="h-4 w-4" />
-              </span>
+            </Link>
+            {t.action && (
+              <button type="button" onClick={t.action.run} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-ink px-4 text-[13px] font-bold text-surface hover:opacity-90">
+                <Check className="h-4 w-4" /> {t.action.label}
+              </button>
+            )}
+            <Link to={t.to} tabIndex={-1} aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-3 text-ink-2 transition-colors group-hover:bg-primary group-hover:text-primary-ink">
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </li>
         ))}

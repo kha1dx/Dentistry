@@ -31,7 +31,7 @@ import type {
   Template,
   YearOfStudy,
 } from "@/data/types";
-import { addDays, addMinutes } from "@/lib/format";
+import { addDays, addMinutes, money } from "@/lib/format";
 
 /* The prototype's clock: real elapsed time is added to the fixed NOW so new events sort correctly. */
 const BOOT = Date.now();
@@ -47,6 +47,13 @@ export interface Toast {
   text: string;
   tone?: "good" | "info" | "warn";
 }
+
+/** The quick actions that can be opened from anywhere in the console, already filled in. */
+export type Flow =
+  | { kind: "payment"; clientId?: string; invoiceId?: string }
+  | { kind: "invoice"; clientId?: string }
+  | { kind: "order"; clientId?: string; message?: string; convId?: string }
+  | { kind: "repair"; clientId?: string; convId?: string };
 
 export const ORDER_STAGES: { id: OrderStage; label: string; hint: string }[] = [
   { id: "new", label: "New request", hint: "Not answered or priced yet" },
@@ -90,14 +97,22 @@ interface State {
   cart: CartLine[];
   /** the signed-in client on the storefront demo */
   meId: string;
+  flow: Flow | null;
+
+  openFlow: (f: Flow) => void;
+  closeFlow: () => void;
 
   toast: (text: string, tone?: Toast["tone"]) => void;
   dismissToast: (id: number) => void;
 
   setOrderStage: (id: string, stage: OrderStage) => void;
   createOrder: (p: { clientId: string; items: { productId: string; qty: number }[]; channel: Order["channel"]; promisedAt: Date }) => string;
-  recordPayment: (invoiceOrRef: string, amount: number, method: PaymentMethod) => void;
+  recordPayment: (invoiceOrRef: string, amount: number, method: PaymentMethod, receipt?: boolean) => void;
+  createInvoice: (p: { clientId: string; note: string; amount: number; dueInDays: number; send: boolean }) => string;
   sendReminder: (invoiceId: string) => void;
+  delayOrder: (id: string, promisedAt: Date) => void;
+  delayRepair: (id: string, promisedAt: Date) => void;
+  postToChat: (convId: string, text: string, link?: string) => void;
   setRepairStage: (id: string, stage: RepairStage) => void;
   sendEstimate: (id: string, partnerCost: number, price: number) => void;
   approveRepair: (id: string) => void;
@@ -138,6 +153,10 @@ export const useStore = create<State>((set, get) => ({
     { key: "p03", qty: 1 },
   ],
   meId: "c003",
+  flow: null,
+
+  openFlow: (flow) => set({ flow }),
+  closeFlow: () => set({ flow: null }),
 
   toast: (text, tone = "good") => {
     const id = ++toastId;
@@ -197,7 +216,7 @@ export const useStore = create<State>((set, get) => ({
     return id;
   },
 
-  recordPayment: (ref, amount, method) => {
+  recordPayment: (ref, amount, method, receipt = true) => {
     const now = clock();
     set((s) => {
       const inv = s.invoices.find((i) => i.id === ref || i.ref === ref);
@@ -213,12 +232,59 @@ export const useStore = create<State>((set, get) => ({
       const repairs = s.repairs.map((r) => (r.id === orderRef ? { ...r, paid: Math.min(r.price ?? 0, r.paid + amount) } : r));
       return { invoices, orders, repairs };
     });
-    get().toast(`Payment recorded · receipt sent on WhatsApp`);
+    get().toast(receipt ? `${money(amount)} recorded · receipt sent on WhatsApp` : `${money(amount)} recorded`);
+  },
+
+  createInvoice: ({ clientId, note, amount, dueInDays, send }) => {
+    const now = clock();
+    const s = get();
+    const n = Math.max(...s.invoices.map((i) => Number(i.id.slice(4)))) + 1;
+    const id = `INV-${n}`;
+    const inv: Invoice = { id, clientId, ref: "", note, issuedAt: now, dueAt: addDays(now, dueInDays), amount, paid: 0, reminders: 0 };
+    set({ invoices: [...s.invoices, inv] });
+    const first = s.clients.find((c) => c.id === clientId)?.name.split(" ")[0] ?? "the client";
+    get().toast(send ? `${id} sent to ${first} on WhatsApp · reminders scheduled` : `${id} saved`);
+    return id;
   },
 
   sendReminder: (invoiceId) => {
     set((s) => ({ invoices: s.invoices.map((i) => (i.id === invoiceId ? { ...i, reminders: i.reminders + 1 } : i)) }));
     get().toast("Reminder sent with InstaPay details", "info");
+  },
+
+  delayOrder: (id, promisedAt) => {
+    const now = clock();
+    const day = promisedAt.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+    set((s) => ({
+      orders: s.orders.map((o) =>
+        o.id === id
+          ? { ...o, promisedAt, timeline: [...o.timeline, { at: now, kind: "status" as const, text: `New delivery date: ${day}` }, { at: addMinutes(now, 0.1), kind: "auto" as const, text: "Apology and new date sent to the client (auto)" }] }
+          : o,
+      ),
+    }));
+    get().toast(`${id} · client told the new date: ${day}`);
+  },
+
+  delayRepair: (id, promisedAt) => {
+    const now = clock();
+    const day = promisedAt.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+    set((s) => ({
+      repairs: s.repairs.map((r) =>
+        r.id === id
+          ? { ...r, promisedAt, timeline: [...r.timeline, { at: now, kind: "status" as const, text: `New return date: ${day}` }, { at: addMinutes(now, 0.1), kind: "auto" as const, text: "Tracking page updated, client told the new date (auto)" }] }
+          : r,
+      ),
+    }));
+    get().toast(`${id} · client told the new date: ${day}`);
+  },
+
+  postToChat: (convId, text, link) => {
+    const now = clock();
+    set((s) => ({
+      conversations: s.conversations.map((c) =>
+        c.id === convId ? { ...c, status: "open", links: link ? [...(c.links ?? []), link] : c.links, messages: [...c.messages, { id: `m${now.getTime()}q`, from: "me", text, at: now }] } : c,
+      ),
+    }));
   },
 
   setRepairStage: (id, stage) => {

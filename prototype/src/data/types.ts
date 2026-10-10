@@ -162,7 +162,9 @@ export interface Repair {
 export interface Invoice {
   id: string;
   clientId: string;
-  ref: string; // order or repair id
+  ref: string; // order or repair id; empty for a one-off invoice
+  /** what a one-off invoice is for */
+  note?: string;
   issuedAt: Date;
   dueAt: Date;
   amount: number;

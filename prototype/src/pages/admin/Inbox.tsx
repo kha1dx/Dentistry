@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Check, CheckCheck, FileText, ImageIcon, Paperclip, Send, ShoppingBag, Sparkles, Wrench, Zap } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, CreditCard, FileText, ImageIcon, Paperclip, Send, ShoppingBag, Sparkles, UserRound, Wrench, Zap } from "lucide-react";
 import { NOW } from "@/config/brand";
 import { YEAR_LABEL, uni } from "@/data/catalog";
 import { orderTotal } from "@/data/seed";
@@ -9,7 +9,8 @@ import { cn } from "@/lib/cn";
 import { ago, duration, firstName, money, time, shortName } from "@/lib/format";
 import { clientStats, isActiveRepair, isOpen, waitingSince } from "@/lib/metrics";
 import { useClientMap, useStore } from "@/store/useStore";
-import { Avatar, Badge, Button, Segmented } from "@/components/ui/primitives";
+import { Avatar, Badge, Button, IconButton, Segmented } from "@/components/ui/primitives";
+import { Drawer } from "@/components/ui/overlays";
 import { CHANNEL_META, ChannelIcon, Mono, OrderStagePill, RepairStagePill } from "@/components/ui/domain";
 
 type Filter = "waiting" | "all" | Channel;
@@ -51,7 +52,7 @@ export default function InboxPage() {
       <div className={cn("flex w-full shrink-0 flex-col border-r border-line bg-surface lg:w-[340px]", selected && "hidden lg:flex")}>
         <div className="border-b border-line px-4 pb-3 pt-4">
           <div className="flex items-baseline justify-between">
-            <h1 className="text-lg font-semibold tracking-[-0.01em]">Inbox</h1>
+            <h1 className="text-[20px] font-extrabold tracking-[-0.02em] text-ink">Inbox</h1>
             <span className="text-[12px] text-ink-muted">All channels in one place</span>
           </div>
           <Segmented
@@ -127,18 +128,15 @@ function Thread({ conv, onBack }: { conv: Conversation; onBack: () => void }) {
   const close = useStore((s) => s.closeConversation);
   const orders = useStore((s) => s.orders);
   const repairs = useStore((s) => s.repairs);
-  const invoices = useStore((s) => s.invoices);
   const recordPayment = useStore((s) => s.recordPayment);
   const approve = useStore((s) => s.approveRepair);
-  const toast = useStore((s) => s.toast);
+  const openFlow = useStore((s) => s.openFlow);
+  const postToChat = useStore((s) => s.postToChat);
   const [text, setText] = useState("");
+  const [info, setInfo] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const client = conv.clientId ? clients.get(conv.clientId) : undefined;
   const name = client?.name ?? conv.leadName ?? "Unknown";
-  const stats = useMemo(() => clientStats(orders, invoices).get(conv.clientId ?? ""), [orders, invoices, conv.clientId]);
-  const myOrders = orders.filter((o) => o.clientId === conv.clientId);
-  const openOrders = myOrders.filter(isOpen);
-  const myRepairs = repairs.filter((r) => r.clientId === conv.clientId && isActiveRepair(r));
   const linkedOrder = orders.find((o) => conv.links?.includes(o.id));
   const linkedRepair = repairs.find((r) => conv.links?.includes(r.id));
   const receipt = conv.messages[conv.messages.length - 1]?.attachment?.includes("instapay") && linkedOrder && linkedOrder.paid < orderTotal(linkedOrder);
@@ -158,6 +156,17 @@ function Thread({ conv, onBack }: { conv: Conversation; onBack: () => void }) {
     return out;
   }, [conv.id, name, receipt]);
 
+  const asked = conv.messages
+    .filter((m) => m.from === "client")
+    .map((m) => m.text)
+    .join(" ");
+  const actions = [
+    { label: "New order", icon: <ShoppingBag className="h-4 w-4" />, run: () => openFlow({ kind: "order", clientId: conv.clientId, message: asked, convId: conv.id }) },
+    { label: "Repair", icon: <Wrench className="h-4 w-4" />, run: () => openFlow({ kind: "repair", clientId: conv.clientId, convId: conv.id }) },
+    { label: "Payment", icon: <CreditCard className="h-4 w-4" />, run: () => openFlow({ kind: "payment", clientId: conv.clientId }) },
+    { label: "Resolve", icon: <Check className="h-4 w-4" />, run: () => close(conv.id), ghost: true },
+  ];
+
   const doSend = (t = text) => {
     if (!t.trim()) return;
     send(conv.id, t.trim());
@@ -168,7 +177,7 @@ function Thread({ conv, onBack }: { conv: Conversation; onBack: () => void }) {
     <div className="flex min-w-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col bg-bg">
         {/* header */}
-        <div className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3">
+        <div className="flex items-center gap-3 bg-surface px-4 pb-2 pt-3">
           <button type="button" onClick={onBack} aria-label="Back to list" className="-ml-1 flex h-8 w-8 items-center justify-center rounded-lg text-ink-2 hover:bg-surface-3 lg:hidden">
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -195,17 +204,16 @@ function Thread({ conv, onBack }: { conv: Conversation; onBack: () => void }) {
               <span className="truncate">{client ? `${uni(client.universityId).short} · ${YEAR_LABEL[client.year]}` : conv.leadMeta}</span>
             </div>
           </div>
-          <div className="hidden items-center gap-1.5 sm:flex">
-            <Button size="sm" icon={<ShoppingBag className="h-3.5 w-3.5" />} onClick={() => toast("Order draft created from this chat. Items detected from the message", "info")}>
-              Create order
+          <IconButton label="Client details" className="xl:hidden" onClick={() => setInfo(true)}>
+            <UserRound className="h-5 w-5" />
+          </IconButton>
+        </div>
+        <div className="no-scrollbar flex gap-1.5 overflow-x-auto border-b border-line bg-surface px-4 pb-2.5">
+          {actions.map((a) => (
+            <Button key={a.label} size="sm" variant={a.ghost ? "ghost" : "secondary"} icon={a.icon} onClick={a.run} className="shrink-0">
+              {a.label}
             </Button>
-            <Button size="sm" icon={<Wrench className="h-3.5 w-3.5" />} onClick={() => toast("Repair ticket created. Tracking link ready to send", "info")}>
-              Repair
-            </Button>
-            <Button size="sm" variant="ghost" icon={<Check className="h-3.5 w-3.5" />} onClick={() => close(conv.id)}>
-              Resolve
-            </Button>
-          </div>
+          ))}
         </div>
 
         {/* messages */}
@@ -257,7 +265,14 @@ function Thread({ conv, onBack }: { conv: Conversation; onBack: () => void }) {
                   <div className="font-medium text-ink">Payment screenshot for {linkedOrder.id}</div>
                   <div className="text-ink-2">Check InstaPay, then confirm. {money(orderTotal(linkedOrder) - linkedOrder.paid)} outstanding.</div>
                 </div>
-                <Button size="sm" variant="primary" onClick={() => recordPayment(linkedOrder.id, orderTotal(linkedOrder) - linkedOrder.paid, "InstaPay")}>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    recordPayment(linkedOrder.id, orderTotal(linkedOrder) - linkedOrder.paid, "InstaPay");
+                    postToChat(conv.id, `Received, thank you ${firstName(name)}! Payment confirmed.`);
+                  }}
+                >
                   Confirm payment
                 </Button>
               </div>
@@ -326,98 +341,126 @@ function Thread({ conv, onBack }: { conv: Conversation; onBack: () => void }) {
 
       {/* context */}
       <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-l border-line bg-surface scroll-thin xl:block">
-        {client ? (
-          <div className="p-4">
-            <div className="flex flex-col items-center text-center">
-              <Avatar name={name} size={56} />
-              <div className="mt-2 font-semibold text-ink">{name}</div>
-              <Mono className="text-[12px]">{client.phone}</Mono>
-              <div className="mt-1 text-[12.5px] text-ink-muted">
-                {uni(client.universityId).name} · {YEAR_LABEL[client.year]}
-              </div>
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-surface-2 p-3 text-center">
-              <div>
-                <div className="text-[11.5px] text-ink-muted">Orders</div>
-                <div className="font-semibold text-ink tnum">{stats?.orders ?? 0}</div>
-              </div>
-              <div>
-                <div className="text-[11.5px] text-ink-muted">Spent</div>
-                <div className="font-semibold text-ink tnum">{((stats?.ltv ?? 0) / 1000).toFixed(1)}K</div>
-              </div>
-              <div>
-                <div className="text-[11.5px] text-ink-muted">Owes</div>
-                <div className={cn("font-semibold tnum", stats?.balance ? "text-bad" : "text-ink")}>{stats?.balance ? `${(stats.balance / 1000).toFixed(1)}K` : "0"}</div>
-              </div>
-            </div>
-            {client.notes && <div className="mt-3 rounded-xl border border-warn/30 bg-warn-soft px-3 py-2 text-[12.5px] text-ink-2">{client.notes}</div>}
-            <div className="mt-5">
-              <div className="eyebrow mb-2">Open orders</div>
-              {openOrders.length ? (
-                <ul className="flex flex-col gap-1.5">
-                  {openOrders.map((o) => (
-                    <li key={o.id}>
-                      <Link to={`/admin/orders?o=${o.id}`} className="block rounded-lg border border-line px-3 py-2 hover:border-line-strong">
-                        <div className="flex items-center justify-between">
-                          <Mono>{o.id}</Mono>
-                          <OrderStagePill stage={o.stage} />
-                        </div>
-                        <div className="mt-1 truncate text-[12.5px] text-ink-2">{o.group ? `Group · ${o.group.students} students` : o.items.map((i) => shortName(i.name)).join(", ")}</div>
-                        <div className="text-[12px] text-ink-muted tnum">{money(orderTotal(o))}</div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-[12.5px] text-ink-muted">None</p>
-              )}
-            </div>
-            <div className="mt-4">
-              <div className="eyebrow mb-2">Repairs</div>
-              {myRepairs.length ? (
-                <ul className="flex flex-col gap-1.5">
-                  {myRepairs.map((r) => (
-                    <li key={r.id}>
-                      <Link to={`/admin/repairs?r=${r.id}`} className="block rounded-lg border border-line px-3 py-2 hover:border-line-strong">
-                        <div className="flex items-center justify-between">
-                          <Mono>{r.id}</Mono>
-                          <RepairStagePill stage={r.stage} />
-                        </div>
-                        <div className="mt-1 truncate text-[12.5px] text-ink-2">{r.device}</div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-[12.5px] text-ink-muted">None</p>
-              )}
-            </div>
-            <div className="mt-4">
-              <div className="eyebrow mb-2">Last purchases</div>
-              <ul className="flex flex-col gap-1 text-[12.5px]">
-                {myOrders
-                  .filter((o) => o.stage === "delivered")
-                  .slice(-3)
-                  .reverse()
-                  .map((o) => (
-                    <li key={o.id} className="flex justify-between gap-2 text-ink-2">
-                      <span className="truncate">{shortName(o.items[0]?.name)}</span>
-                      <span className="shrink-0 text-ink-muted">{ago(o.createdAt)}</span>
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          </div>
-        ) : (
-          <div className="p-5">
-            <div className="eyebrow mb-2">New lead</div>
-            <p className="text-[13px] text-ink-2">{conv.leadName} isn't a client yet. Replying fast matters most here: they're comparing suppliers.</p>
-            <Button className="mt-3 w-full" variant="soft" onClick={() => toast("Client profile created and linked to this chat", "good")}>
-              Save as client
-            </Button>
-          </div>
-        )}
+        <ClientContext conv={conv} />
       </aside>
+      <Drawer open={info} onClose={() => setInfo(false)} title={name} width={380}>
+        <ClientContext conv={conv} />
+      </Drawer>
     </div>
+  );
+}
+
+function ClientContext({ conv }: { conv: Conversation }) {
+  const clients = useClientMap();
+  const orders = useStore((s) => s.orders);
+  const repairs = useStore((s) => s.repairs);
+  const invoices = useStore((s) => s.invoices);
+  const openFlow = useStore((s) => s.openFlow);
+  const toast = useStore((s) => s.toast);
+  const client = conv.clientId ? clients.get(conv.clientId) : undefined;
+  const name = client?.name ?? conv.leadName ?? "Unknown";
+  const stats = useMemo(() => clientStats(orders, invoices).get(conv.clientId ?? ""), [orders, invoices, conv.clientId]);
+  const myOrders = orders.filter((o) => o.clientId === conv.clientId);
+  const openOrders = myOrders.filter(isOpen);
+  const myRepairs = repairs.filter((r) => r.clientId === conv.clientId && isActiveRepair(r));
+  return (
+    <>
+    {client ? (
+      <div className="p-4">
+        <div className="flex flex-col items-center text-center">
+          <Avatar name={name} size={56} />
+          <div className="mt-2 font-semibold text-ink">{name}</div>
+          <Mono className="text-[12px]">{client.phone}</Mono>
+          <div className="mt-1 text-[12.5px] text-ink-muted">
+            {uni(client.universityId).name} · {YEAR_LABEL[client.year]}
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-surface-2 p-3 text-center">
+          <div>
+            <div className="text-[11.5px] text-ink-muted">Orders</div>
+            <div className="font-semibold text-ink tnum">{stats?.orders ?? 0}</div>
+          </div>
+          <div>
+            <div className="text-[11.5px] text-ink-muted">Spent</div>
+            <div className="font-semibold text-ink tnum">{((stats?.ltv ?? 0) / 1000).toFixed(1)}K</div>
+          </div>
+          <div>
+            <div className="text-[11.5px] text-ink-muted">Owes</div>
+            <div className={cn("font-semibold tnum", stats?.balance ? "text-bad" : "text-ink")}>{stats?.balance ? `${(stats.balance / 1000).toFixed(1)}K` : "0"}</div>
+          </div>
+        </div>
+        {!!stats?.balance && (
+          <Button size="sm" variant="soft" className="mt-2 w-full" icon={<CreditCard className="h-3.5 w-3.5" />} onClick={() => openFlow({ kind: "payment", clientId: client.id })}>
+            Record a payment
+          </Button>
+        )}
+        {client.notes && <div className="mt-3 rounded-xl border border-warn/30 bg-warn-soft px-3 py-2 text-[12.5px] text-ink-2">{client.notes}</div>}
+        <div className="mt-5">
+          <div className="eyebrow mb-2">Open orders</div>
+          {openOrders.length ? (
+            <ul className="flex flex-col gap-1.5">
+              {openOrders.map((o) => (
+                <li key={o.id}>
+                  <Link to={`/admin/orders?o=${o.id}`} className="block rounded-lg border border-line px-3 py-2 hover:border-line-strong">
+                    <div className="flex items-center justify-between">
+                      <Mono>{o.id}</Mono>
+                      <OrderStagePill stage={o.stage} />
+                    </div>
+                    <div className="mt-1 truncate text-[12.5px] text-ink-2">{o.group ? `Group · ${o.group.students} students` : o.items.map((i) => shortName(i.name)).join(", ")}</div>
+                    <div className="text-[12px] text-ink-muted tnum">{money(orderTotal(o))}</div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[12.5px] text-ink-muted">None</p>
+          )}
+        </div>
+        <div className="mt-4">
+          <div className="eyebrow mb-2">Repairs</div>
+          {myRepairs.length ? (
+            <ul className="flex flex-col gap-1.5">
+              {myRepairs.map((r) => (
+                <li key={r.id}>
+                  <Link to={`/admin/repairs?r=${r.id}`} className="block rounded-lg border border-line px-3 py-2 hover:border-line-strong">
+                    <div className="flex items-center justify-between">
+                      <Mono>{r.id}</Mono>
+                      <RepairStagePill stage={r.stage} />
+                    </div>
+                    <div className="mt-1 truncate text-[12.5px] text-ink-2">{r.device}</div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[12.5px] text-ink-muted">None</p>
+          )}
+        </div>
+        <div className="mt-4">
+          <div className="eyebrow mb-2">Last purchases</div>
+          <ul className="flex flex-col gap-1 text-[12.5px]">
+            {myOrders
+              .filter((o) => o.stage === "delivered")
+              .slice(-3)
+              .reverse()
+              .map((o) => (
+                <li key={o.id} className="flex justify-between gap-2 text-ink-2">
+                  <span className="truncate">{shortName(o.items[0]?.name)}</span>
+                  <span className="shrink-0 text-ink-muted">{ago(o.createdAt)}</span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      </div>
+    ) : (
+      <div className="p-5">
+        <div className="eyebrow mb-2">New lead</div>
+        <p className="text-[13px] text-ink-2">{conv.leadName} isn't a client yet. Replying fast matters most here: they're comparing suppliers.</p>
+        <Button className="mt-3 w-full" variant="soft" onClick={() => toast("Client profile created and linked to this chat", "good")}>
+          Save as client
+        </Button>
+      </div>
+    )}
+    </>
   );
 }

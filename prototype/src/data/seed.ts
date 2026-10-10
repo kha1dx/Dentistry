@@ -440,14 +440,23 @@ export const REPAIRS: Repair[] = (() => {
 
 export const INVOICES: Invoice[] = (() => {
   const list: Invoice[] = [];
-  const items: { ref: string; clientId: string; at: Date; amount: number; paid: number; method?: PaymentMethod; doneAt?: Date }[] = [];
+  const items: { ref: string; clientId: string; at: Date; amount: number; paid: number; method?: PaymentMethod; doneAt?: Date; settled?: boolean }[] = [];
+  // Balances older than about 2.5 months were collected or written off long ago; keep the sample believable.
+  const stale = (d: Date) => NOW.getTime() - d.getTime() > 75 * 86_400_000;
   for (const o of ORDERS) {
     if (["new", "quoted", "cancelled"].includes(o.stage)) continue;
-    items.push({ ref: o.id, clientId: o.clientId, at: addMinutes(o.createdAt, 42), amount: orderTotal(o), paid: o.paid, method: o.paymentMethod, doneAt: o.deliveredAt });
+    const settled = o.paid < orderTotal(o) && stale(o.createdAt);
+    if (settled) {
+      o.paid = orderTotal(o);
+      o.paymentMethod ??= "Cash";
+    }
+    items.push({ ref: o.id, clientId: o.clientId, at: addMinutes(o.createdAt, 42), amount: orderTotal(o), paid: o.paid, method: o.paymentMethod, doneAt: o.deliveredAt, settled });
   }
   for (const rp of REPAIRS) {
     if (!rp.price || !rp.approved) continue;
-    items.push({ ref: rp.id, clientId: rp.clientId, at: rp.returnedAt ?? addDays(rp.receivedAt, 2), amount: rp.price, paid: rp.paid, method: rp.paid ? (r.weighted(PAY_METHODS) as PaymentMethod) : undefined });
+    const settled = rp.paid < rp.price && stale(rp.receivedAt);
+    if (settled) rp.paid = rp.price;
+    items.push({ ref: rp.id, clientId: rp.clientId, at: rp.returnedAt ?? addDays(rp.receivedAt, 2), amount: rp.price, paid: rp.paid, method: settled ? "Cash" : rp.paid ? (r.weighted(PAY_METHODS) as PaymentMethod) : undefined, settled });
   }
   items.sort((a, b) => a.at.getTime() - b.at.getTime());
   items.forEach((x, i) => {
@@ -462,7 +471,7 @@ export const INVOICES: Invoice[] = (() => {
       amount: x.amount,
       paid: x.paid,
       method: x.method,
-      paidAt: x.paid >= x.amount ? addDays(x.at, Math.min(r.int(0, 9), Math.max(0, (NOW.getTime() - x.at.getTime()) / 86_400_000))) : undefined,
+      paidAt: x.settled ? addDays(dueAt, 12) : x.paid >= x.amount ? addDays(x.at, Math.min(r.int(0, 9), Math.max(0, (NOW.getTime() - x.at.getTime()) / 86_400_000))) : undefined,
       reminders: x.paid < x.amount && overdueDays > 0 ? Math.min(3, 1 + Math.floor(overdueDays / 7)) : 0,
     });
   });

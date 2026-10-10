@@ -4,6 +4,7 @@ import {
   BarChart3,
   Bell,
   Contact,
+  CreditCard,
   FileText,
   Handshake,
   Inbox,
@@ -27,7 +28,8 @@ import { cn } from "@/lib/cn";
 import { ago } from "@/lib/format";
 import { isActiveRepair, isOpen, waitingSince } from "@/lib/metrics";
 import { useTheme } from "@/lib/theme";
-import { useStore } from "@/store/useStore";
+import { useStore, type Flow } from "@/store/useStore";
+import { FlowHost } from "@/components/flows/Flows";
 import { Avatar, Badge, Kbd } from "@/components/ui/primitives";
 import { Logo, LogoMark } from "@/components/ui/Logo";
 import { Modal, Popover } from "@/components/ui/overlays";
@@ -207,10 +209,12 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
     };
   }, [q, clients, orders, repairs, products, groups]);
 
+  const openFlow = useStore((s) => s.openFlow);
   const go = (to: string) => {
     onClose();
     nav(to);
   };
+  const actions = QUICK.filter((a) => a.flow && (!q.trim() || a.label.toLowerCase().includes(q.trim().toLowerCase())));
   const Row = ({ children, onClick }: { children: ReactNode; onClick: () => void }) => (
     <button type="button" onClick={onClick} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13.5px] text-ink hover:bg-surface-3 focus:bg-surface-3 focus:outline-none">
       {children}
@@ -237,6 +241,22 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
       </div>
       <div className="max-h-[56vh] overflow-y-auto pb-2 scroll-thin">
+        {actions.length > 0 && (
+          <Group title="Do">
+            {actions.map((a) => (
+              <Row
+                key={a.label}
+                onClick={() => {
+                  onClose();
+                  openFlow(a.flow!);
+                }}
+              >
+                <a.Icon className="h-4 w-4 text-ink-muted" />
+                <span className="flex-1">{a.label === "Payment received" ? "Record a payment" : `New ${a.label.toLowerCase()}`}</span>
+              </Row>
+            ))}
+          </Group>
+        )}
         {res.clients.length > 0 && (
           <Group title="Clients">
             {res.clients.map((c) => (
@@ -346,15 +366,18 @@ function Notifications() {
   );
 }
 
+const QUICK: { label: string; sub: string; Icon: typeof ShoppingBag; flow?: Flow; to?: string }[] = [
+  { label: "Payment received", sub: "Match it to an invoice, send a receipt", Icon: CreditCard, flow: { kind: "payment" } },
+  { label: "Order", sub: "From a chat or a call", Icon: ShoppingBag, flow: { kind: "order" } },
+  { label: "Repair", sub: "Device picked up", Icon: Wrench, flow: { kind: "repair" } },
+  { label: "Invoice", sub: "For anything outside an order", Icon: FileText, flow: { kind: "invoice" } },
+  { label: "Broadcast", sub: "Message a group of students", Icon: Zap, to: "/admin/messaging?tab=broadcasts" },
+];
+
 function NewMenu() {
   const [open, setOpen] = useState(false);
   const nav = useNavigate();
-  const items = [
-    { label: "Order", sub: "From a chat or a call", Icon: ShoppingBag, to: "/admin/orders?new=1" },
-    { label: "Repair", sub: "Device picked up", Icon: Wrench, to: "/admin/repairs?new=1" },
-    { label: "Invoice", sub: "Synced to your invoicing app", Icon: FileText, to: "/admin/invoices" },
-    { label: "Broadcast", sub: "Message a group of students", Icon: Zap, to: "/admin/messaging?tab=broadcasts" },
-  ];
+  const openFlow = useStore((s) => s.openFlow);
   return (
     <div className="relative">
       <button
@@ -365,22 +388,23 @@ function NewMenu() {
         <Plus className="h-4 w-4" />
         <span className="hidden sm:inline">New</span>
       </button>
-      <Popover open={open} onClose={() => setOpen(false)} className="right-0 top-11 w-64 p-1.5">
-        {items.map((i) => (
+      <Popover open={open} onClose={() => setOpen(false)} className="right-0 top-11 w-72 p-1.5">
+        {QUICK.map((i) => (
           <button
             key={i.label}
             type="button"
             onClick={() => {
               setOpen(false);
-              nav(i.to);
+              if (i.flow) openFlow(i.flow);
+              else if (i.to) nav(i.to);
             }}
-            className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-surface-3"
+            className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left hover:bg-surface-3"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-ink">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-ink">
               <i.Icon className="h-4 w-4" />
             </span>
             <span>
-              <span className="block text-[13.5px] font-medium text-ink">{i.label}</span>
+              <span className="block text-[13.5px] font-bold text-ink">{i.label}</span>
               <span className="block text-xs text-ink-muted">{i.sub}</span>
             </span>
           </button>
@@ -496,6 +520,7 @@ export default function AdminLayout() {
       )}
 
       <CommandPalette open={cmd} onClose={() => setCmd(false)} />
+      <FlowHost />
     </div>
   );
 }
